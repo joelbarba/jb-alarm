@@ -94,7 +94,7 @@ async function addLog(isOpen) {
     alarm: active ? 'active' : 'inactive',
   };
   const docRef = await firestore.addDoc(doorLogsCol, newDoc);
-  console.log(`New log added with ID = ${docRef.id}`);
+  console.log(getTime(), `Log ${docRef.id}`);
 }
 
 async function getLogs() {
