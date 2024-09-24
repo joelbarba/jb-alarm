@@ -3,10 +3,11 @@ echo ""
 echo '1 -->  START: ssh -n -f pi@192.168.1.135 "sh background_startup.sh"'
 echo '2 -->  STOP:  ssh -n -f pi@192.168.1.135 "sh terminate.sh"'
 echo '3 -->  CHECK: ssh -n -f pi@192.168.1.135 "pgrep -f main.js"'
-echo '4 -->  SCAN:  scan network for IP'
-echo '5 -->  ACTIVATE  : curl -X GET http://192.168.1.135:4358/activate'
-echo '6 -->  DEACTIVATE: curl -X GET http://192.168.1.135:4358/deactivate'
-echo '7 -->  SSH INTO: ssh pi@192.168.1.135'
+echo '4 -->  UPDATE:  ssh -n -f pi@192.168.1.135 "sh terminate.sh"'
+echo '5 -->  SCAN:  scan network for IP'
+echo '6 -->  ACTIVATE  : curl -X GET http://192.168.1.135:4358/activate'
+echo '7 -->  DEACTIVATE: curl -X GET http://192.168.1.135:4358/deactivate'
+echo '8 -->  SSH INTO: ssh pi@192.168.1.135'
 
 read x
 echo ""
@@ -20,17 +21,21 @@ if [[ "$x" == "3" ]]; then
   ssh -n -f pi@192.168.1.135 "pgrep -f main.js"
 fi
 if [[ "$x" == "4" ]]; then
-  nmap -sn 192.168.1.0/24
+  ssh -n -f pi@192.168.1.135 "sh update_jbalarm.sh"
 fi
 if [[ "$x" == "5" ]]; then
-  curl -X GET http://192.168.1.135:4358/activate
+  nmap -sn 192.168.1.0/24
 fi
 if [[ "$x" == "6" ]]; then
-  curl -X GET http://192.168.1.135:4358/deactivate
+  curl -X GET http://192.168.1.135:4358/activate
 fi
 if [[ "$x" == "7" ]]; then
+  curl -X GET http://192.168.1.135:4358/deactivate
+fi
+if [[ "$x" == "8" ]]; then
   ssh pi@192.168.1.135
 fi
+
 
 # TODOS:
 # Add code to github + update script to pull auto from pi
