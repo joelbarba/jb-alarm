@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "express": "^4.21.0",
-    "firebase": "^10.13.2"
+    "firebase": "^10.13.2",
+    "onoff": "^6.0.3"
   }
 }
