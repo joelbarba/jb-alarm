@@ -1,4 +1,5 @@
-const Gpio = require('onoff').Gpio;
+// const Gpio = require('onoff').Gpio;
+import { Gpio } from 'onoff';
 const door     = new Gpio(16, 'in', 'both',   { debounceTimeout: 10 });
 const button   = new Gpio(4,  'in', 'rising', { debounceTimeout: 10 });
 const greenLed = new Gpio(17, 'out');
@@ -7,7 +8,7 @@ const redLed   = new Gpio(18, 'out');
 // Mocking
 // const greenLed = { writeSync: (v) => console.log(`GREEN: ${!!v}`) };
 // const redLed = { writeSync: (v) => console.log(`RED: ${!!v}`) };
-// const door = (function() { let callback = () => {}; return { trigger: (v) => callback(false, v), watch: (fn) => callback = fn }; }());
+// const door = (function() { let callback = () => {}; return { trigger: (v) => callback(false, v), watch: (fn) => callback = fn, readSync: () => {} }; }());
 // const button = (function() { let callback = () => {}; return { trigger: (v) => callback(false, v), watch: (fn) => callback = fn }; }());
 
 console.log('main.js running...');
@@ -15,7 +16,7 @@ console.log('main.js running...');
 // setTimeout(_ => door.trigger(1), 5000);
 
 
-let active = false; // whether the alarm is active
+let isActive = false; // whether the alarm is active
 let isOpen = false; // whether the door is open
 let ledInt; // blinking let interval
 
@@ -33,7 +34,7 @@ door.watch((err, value) => {
   if (err) { console.error('Door sensor error'); throw err; }
   isOpen = !!value;
   console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'}`);
-  addLog(isOpen);
+  addLog('door');
   turnLeds();
 });
 
@@ -44,10 +45,11 @@ process.on('SIGINT', _ => {
 });
 
 
-function activation(newValue = !active) {
-  active = newValue;
+function activation(newValue = !isActive) {
+  const writeLog = isActive != newValue;
+  isActive = newValue;
   if (ledInt) { clearInterval(ledInt); }
-  if (active) {
+  if (isActive) {
     console.log(getTime(), `ALARM activated`);
     greenLed.writeSync(1);
     ledInt = setInterval(_ => { greenLed.writeSync(1); setTimeout(_ => greenLed.writeSync(0), 70)}, 1500);
@@ -55,11 +57,12 @@ function activation(newValue = !active) {
     console.log(getTime(), `ALARM deactivated`);
   }
   turnLeds();
+  if (writeLog) { addLog('alarm'); }
 }
 
 function turnLeds() {
   redLed.writeSync(isOpen ? 1 : 0); // Turn red on if door open
-  if (!active) { greenLed.writeSync(0); }
+  if (!isActive) { greenLed.writeSync(0); }
 }
 
 function turnLedsOff() {
@@ -70,10 +73,11 @@ function turnLedsOff() {
 // ---------------------------------------------------------------------------------------
 // Firebase communication
 // Adding docs to the doorlog collection for every change
-const initializeApp = require('firebase/app').initializeApp;
-const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
-const firestore = require('firebase/firestore/lite');
-const secrets = require('./secrets.js');
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import * as firestore from 'firebase/firestore/lite';
+import * as secrets from './secrets.js';
+
 
 const app = initializeApp(secrets.firebaseConfig);  // Initialize Firebase
 const db = firestore.getFirestore(app);
@@ -83,18 +87,22 @@ const auth = getAuth();
 const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, secrets.userAuth.pass).then((userCredential) => {
   console.log('Firebase: Logged in');
   doorLogsCol = firestore.collection(db, 'doorlog');
-  isFirebaseReady = true;
 }).catch((error) => console.error(`Login error: ${error.code} -> ${error.message}`));
 
-async function addLog(isOpen) {
-  await fireBasePromise;  
-  const newDoc = {
-    door: isOpen ? 'open' : 'closed',
-    time: getTime(),
-    alarm: active ? 'active' : 'inactive',
-  };
-  const docRef = await firestore.addDoc(doorLogsCol, newDoc);
-  console.log(getTime(), `Log ${docRef.id}`);
+async function addLog(change = 'door') {
+  try {
+    await fireBasePromise;  
+    const newDoc = {
+      door: isOpen ? 'open' : 'closed',
+      time: getTime(),
+      alarm: isActive ? 'active' : 'inactive',
+      change, // door | alarm
+    };
+    const docRef = await firestore.addDoc(doorLogsCol, newDoc);
+    // console.log(getTime(), `Log ${docRef.id}`);
+  } catch(err) {
+    console.log(getTime(), `Error logging to firebase: ${err}`);
+  }
 }
 
 async function getLogs() {
@@ -117,8 +125,7 @@ function getTime() {
 
 // ---------------------------------------------------------------------------------------
 // Remote control via HTTP
-
-const express = require('express');
+import express from 'express';
 const webServer = express();
 const port = 4358;
 

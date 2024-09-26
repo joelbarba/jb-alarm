@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+  <title>JB-ALARM</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="styles.css"></link>
+</head>
+<body>
+  <div id="header">
+    <h1>JB-ALARM</h1>
+    <button id="config-btn">Config</button>
+  </div>
+
+  <div id="api-panel" style="display: none;">
+    <span>apiKey:</span><input id="api-key"/><br/>
+    <button id="api-key-btn">Save</button>
+  </div>
+
+  <div id="login-panel">
+    <span>User:</span><input id="login-usr"/><br/>
+    <span>Pass:</span><input id="login-pwd"/><br/>
+    <button id="login-btn">Log In</button>
+  </div>
+
+  <div id="config-panel">
+    <button id="clear-10-btn">CAP TO 10 LOGS</button>
+    <button id="clear-all-btn">DELETE ALL LOGS</button>
+  </div>
+
+  <div id="main-panel">
+    <h2 id="door-status">The door is: ...</h2>
+    <h2 id="alarm-status">Alarm: ...</h2>
+    <div>
+      <button id="deactivate-btn">Deactivate</button>
+      <button id="activate-btn">Activate</button>
+    </div>
+    <h3 id="last-action">Last action: Opened at xxx</h3>
+    <span>Logs:</span>
+    <p id="logs-list">
+      xxxxx
+      xxxxx
+      xxxxx
+      xxxxx
+    </p>
+  </div>
+
+  <script type="module" src="client.js"></script>
+</body>
+</html>
