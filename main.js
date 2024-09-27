@@ -75,7 +75,7 @@ function turnLedsOff() {
 // Adding docs to the doorlog collection for every change
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
-import * as firestore from 'firebase/firestore/lite';
+import * as firestore from 'firebase/firestore';
 import * as secrets from './secrets.js';
 import { getTime } from './lib.js';
 
@@ -89,14 +89,12 @@ const auth = getAuth();
 const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, secrets.userAuth.pass).then((userCredential) => {
   console.log('Firebase: Logged in');
   doorLogsCol = firestore.collection(db, 'doorlog');
-  console.log('firestore.onSnapshot');
   if (unsubscribe) { unsubscribe(); }
   unsubscribe = firestore.onSnapshot(doorLogsCol, (snapshot) => updateState(snapshot), (err) => console.error(err));
 }).catch((error) => console.error(`Login error: ${error.code} -> ${error.message}`));
 
 function updateState(snapshot) { // Update the status of the Alarm from Firebase
-  console.log('updateState');
-  logs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+  const logs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   logs.sort((a, b) => new Date(b.time) - new Date(a.time)); // order from latest (right now) to oldest (long ago)
   console.log('Current Status =', logs[0]);
   isActive = logs[0]?.alarm === 'active';
