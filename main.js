@@ -84,12 +84,14 @@ const app = initializeApp(secrets.firebaseConfig);  // Initialize Firebase
 const db = firestore.getFirestore(app);
 
 let doorLogsCol; // Ref to the doorlog collection
+let unsubscribe;
 const auth = getAuth();
 const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, secrets.userAuth.pass).then((userCredential) => {
   console.log('Firebase: Logged in');
   doorLogsCol = firestore.collection(db, 'doorlog');
   console.log('firestore.onSnapshot');
-  firestore.onSnapshot(doorLogsCol, (snapshot) => updateState(snapshot), (err) => console.error(err));
+  if (unsubscribe) { unsubscribe(); }
+  unsubscribe = firestore.onSnapshot(doorLogsCol, (snapshot) => updateState(snapshot), (err) => console.error(err));
 }).catch((error) => console.error(`Login error: ${error.code} -> ${error.message}`));
 
 function updateState(snapshot) { // Update the status of the Alarm from Firebase
