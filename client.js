@@ -183,8 +183,8 @@ function printLogs() {
       if (curr.door === 'open')   { $('last-action').innerHTML += `<span style="color: ${openColor};">Opened</span>`; }
       if (curr.door === 'closed') { $('last-action').innerHTML += `<span style="color: ${closedColor};">Closed</span>`; }
     } else {
-      if (curr.door === 'active')   { $('last-action').innerHTML += `<span style="color: ${activeColor};">Activated</span>`; }
-      if (curr.door === 'inactive') { $('last-action').innerHTML += `<span style="color: ${inactiveColor};">Deactivated</span>`; }
+      if (curr.alarm === 'active')   { $('last-action').innerHTML += `<span style="color: ${activeColor};">Activated</span>`; }
+      if (curr.alarm === 'inactive') { $('last-action').innerHTML += `<span style="color: ${inactiveColor};">Deactivated</span>`; }
     }
     $('last-action').innerHTML += `<br/>at <span style="color: ${dateColor}">${curr.time}</span>`;
   }
