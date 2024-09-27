@@ -1,6 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
 import * as firestore from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
+import { getTime } from './lib.js';
 
 let doorLogsCollection; // Ref to the doorlog collection
 let isLoggedIn = false;
@@ -32,11 +33,13 @@ function initFirebase() {
     appId: "1:537223610796:web:1f552e80d7dd309c65fa09",
     measurementId: "G-CK60M4SK5J"
   };
-  console.log('firebaseConfig ------>', firebaseConfig);
+  // console.log('firebaseConfig ------>', firebaseConfig);
   
   app = initializeApp(firebaseConfig);  // Initialize Firebase
   db = firestore.getFirestore(app);
   auth = getAuth();
+
+  let unsubscribe;
   
   // Detect if there is a current session alive
   onAuthStateChanged(auth, (user) => {
@@ -48,13 +51,13 @@ function initFirebase() {
       console.log('Auth Session Detected', user);
       doorLogsCollection = firestore.collection(db, 'doorlog');
       // loadLogs(); // the subscription triggers the first load already
-      subscribeToLogs();
+      if (unsubscribe) { unsubscribe(); }
+      unsubscribe = firestore.onSnapshot(doorLogsCollection, (snapshot) => updateState(snapshot), (err) => console.error(err));
     } else {
       console.log('No Auth Session');
     }
   });
 }
-
 
 function login(username, password) {
   signInWithEmailAndPassword(auth, username, password).then(async (userCredential) => {
@@ -62,18 +65,40 @@ function login(username, password) {
   }).catch((error) => console.error(`Login error: ${error.code} -> ${error.message}`));
 }
 
-async function loadLogs() {  
+async function loadLogs() {
   const snapshot = await firestore.getDocs(doorLogsCollection);
-  fetchSnapshot(snapshot);
+  updateState(snapshot);
 }
-function subscribeToLogs() {
-  const unsubscribe = firestore.onSnapshot(doorLogsCollection, (snapshot) => fetchSnapshot(snapshot), (err) => console.error(err));
-}
-function fetchSnapshot(snapshot) {
+
+function updateState(snapshot) {
   logs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   logs.sort((a, b) => new Date(b.time) - new Date(a.time)); // order from latest (right now) to oldest (long ago)
   console.log('LOGS:', logs);
+  console.log('Current Status =', logs[0]);
   printLogs();
+  printDoorStatus(logs[0]?.door);
+  printAlarmStatus(logs[0]?.alarm);
+  if (logs[0]?.alarm === 'active' && logs[0]?.door === 'open') {
+    $('warning').style.display = 'block';
+    console.warn(new Date(), 'ALARM RINGING - The door was open with the alarm active!!!');
+  }
+  if (logs[0]?.alarm === 'inactive') { $('warning').style.display = 'none'; }
+}
+
+async function switchAlarm(newValue) {
+  const isActive = logs[0]?.alarm === 'active';
+  if (newValue !== isActive || !logs.length) {
+    const alarm = newValue ? 'active' : 'inactive';
+    const newDoc = {
+      door: logs[0]?.door || '???',
+      time: getTime(),
+      alarm,
+      change: 'alarm'
+    };
+    await firestore.addDoc(doorLogsCollection, newDoc);
+    console.log('Alarm changed to: ', alarm);
+    printAlarmStatus(alarm);
+  }  
 }
 
 
@@ -81,6 +106,18 @@ function fetchSnapshot(snapshot) {
 
 
 
+
+// Delete -10 logs
+$('clear-1-btn').addEventListener('click', async function() {
+  $('clear-1-btn').disabled = true;
+  await loadLogs();
+  const oldLogs = logs.slice(1); // Preserve the latest log
+  for (let t = 0; t < oldLogs.length; t++) {
+    console.log('deleting log', oldLogs[t].id);
+    await firestore.deleteDoc(firestore.doc(db, 'doorlog', oldLogs[t].id));
+  }
+  $('clear-1-btn').disabled = false;
+});
 
 // Delete -10 logs
 $('clear-10-btn').addEventListener('click', async function() {
@@ -91,7 +128,7 @@ $('clear-10-btn').addEventListener('click', async function() {
     console.log('deleting log', oldLogs[t].id);
     await firestore.deleteDoc(firestore.doc(db, 'doorlog', oldLogs[t].id));
   }
-  if (logs.length > 10) { $('clear-10-btn').disabled = false; }
+  $('clear-10-btn').disabled = false;
 });
 
 // Delete All logs
@@ -104,11 +141,9 @@ $('clear-all-btn').addEventListener('click', async function() {
       console.log('deleting log', logsCopy[t].id);
       await firestore.deleteDoc(firestore.doc(db, 'doorlog', logsCopy[t].id));
     }
+    $('clear-all-btn').disabled = false;
   }
 });
-
-
-
 
 $('login-btn').addEventListener('click', ev => {
   const user = $('login-usr').value;
@@ -116,48 +151,64 @@ $('login-btn').addEventListener('click', ev => {
   login(user, pass);
 });
 
+$('config-btn').addEventListener('click', () => {
+  const isHidden = $('config-panel').style.display === 'none';
+  $('config-panel').style.display = isLoggedIn && isHidden ? 'block' : 'none';
+})
 
+$('activate-btn').addEventListener('click',   ev => switchAlarm(true));
+$('deactivate-btn').addEventListener('click', ev => switchAlarm(false));
 
-
-$('activate-btn').addEventListener('click', ev => {
-  printAlarmStatus(true);
+$('warning').addEventListener('click', ev => {
+  $('warning').style.display = 'none'; 
 });
-$('deactivate-btn').addEventListener('click', ev => {
-  printAlarmStatus(false);
-});
+
+
+const openColor = 'red';        // red
+const closedColor = '#00c100';  // green
+const activeColor = 'yellow';   // yellow
+const inactiveColor = 'gray'; // gray
+const dateColor = '#00adad';    // blue
 
 function printLogs() {
   $('logs-list').innerHTML = logs.map(log => {
-    if (log.alarm === 'active') { log.alarm = '_active_'; };
-    return `${log.time} - (${log.alarm}) door: ${log.door}`;
+    const alarm = log.alarm === 'active' ? '_active_' : 'inactive';
+    return `<span style="color: ${dateColor}">${log.time}</span> - (${alarm}) door: ${log.door}`;
   }).join(`<br/>`);
 
+  $('last-action').innerHTML = `Last action: `;
   if (logs.length) {
     const curr = logs[0];
-    if (curr.change === 'door') {      
-      $('last-action').innerHTML = `Last action: <b>${curr.door === 'open'? 'Opened' : 'Closed'}</b> <br/>at ${curr.time}`;
+    if (curr.change === 'door') {
+      if (curr.door === 'open')   { $('last-action').innerHTML += `<span style="color: ${openColor};">Opened</span>`; }
+      if (curr.door === 'closed') { $('last-action').innerHTML += `<span style="color: ${closedColor};">Closed</span>`; }
     } else {
-      $('last-action').innerHTML = `Last action: <b>${curr.alarm === 'active'? 'Activated' : 'Deactivated'}</b> <br/>at ${curr.time}`;
+      if (curr.door === 'active')   { $('last-action').innerHTML += `<span style="color: ${activeColor};">Activated</span>`; }
+      if (curr.door === 'inactive') { $('last-action').innerHTML += `<span style="color: ${inactiveColor};">Deactivated</span>`; }
     }
-  } else {
-    $('last-action').innerHTML = `Last action: -`;
+    $('last-action').innerHTML += `<br/>at <span style="color: ${dateColor}">${curr.time}</span>`;
   }
 }
-function printDoorStatus(isDoorOpen) {
-  if (isDoorOpen) {
+function printDoorStatus(door) {
+  if (door === 'open') {
     $('door-status').innerHTML = `The door is: OPEN`;
-    $('door-status').style.background = 'red';
-  } else {
+    $('door-status').style.background = openColor;
+  } else if (door === 'closed') {
     $('door-status').innerHTML = `The door is: CLOSED`;
-    $('door-status').style.background = '#00c100'; // green
+    $('door-status').style.background = closedColor;
+  } else {
+    $('door-status').innerHTML = `The door is: ???`;
+    $('door-status').style.background = 'black';
   }
 }
-function printAlarmStatus(isAlarmActive) {
-  $('activate-btn').disabled = isAlarmActive;
-  $('deactivate-btn').disabled = !isAlarmActive;
-  if (isAlarmActive) {
-    $('alarm-status').innerHTML = `Alarm: ACTIVE`;
-  } else {
+function printAlarmStatus(alarm) {
+  $('activate-btn').disabled = alarm === 'active';
+  $('deactivate-btn').disabled = alarm === 'inactive';
+  if (alarm === 'active') {
+    $('alarm-status').innerHTML = `Alarm: <span style="color: ${activeColor}">ACTIVE</span>`;
+  } else if (alarm === 'inactive') {
     $('alarm-status').innerHTML = `Alarm: INACTIVE`;
+  } else {
+    $('alarm-status').innerHTML = `Alarm: ???`;
   }
 }

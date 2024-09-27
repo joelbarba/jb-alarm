@@ -1,7 +1,7 @@
 // const Gpio = require('onoff').Gpio;
 import { Gpio } from 'onoff';
-const door     = new Gpio(16, 'in', 'both',   { debounceTimeout: 10 });
-const button   = new Gpio(4,  'in', 'rising', { debounceTimeout: 10 });
+const door     = new Gpio(16, 'in', 'both',   { debounceTimeout: 100 });
+const button   = new Gpio(4,  'in', 'rising', { debounceTimeout: 100 });
 const greenLed = new Gpio(17, 'out');
 const redLed   = new Gpio(18, 'out');
 
@@ -77,6 +77,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import * as firestore from 'firebase/firestore/lite';
 import * as secrets from './secrets.js';
+import { getTime } from './lib.js';
 
 
 const app = initializeApp(secrets.firebaseConfig);  // Initialize Firebase
@@ -87,7 +88,15 @@ const auth = getAuth();
 const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, secrets.userAuth.pass).then((userCredential) => {
   console.log('Firebase: Logged in');
   doorLogsCol = firestore.collection(db, 'doorlog');
+  firestore.onSnapshot(doorLogsCol, (snapshot) => updateState(snapshot), (err) => console.error(err));
 }).catch((error) => console.error(`Login error: ${error.code} -> ${error.message}`));
+
+function updateState(snapshot) { // Update the status of the Alarm from Firebase
+  logs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+  logs.sort((a, b) => new Date(b.time) - new Date(a.time)); // order from latest (right now) to oldest (long ago)
+  console.log('Current Status =', logs[0]);
+  isActive = logs[0]?.alarm === 'active';
+}
 
 async function addLog(change = 'door') {
   try {
@@ -110,17 +119,8 @@ async function getLogs() {
   return logsSnapshot.docs.map(doc => doc.data());
 }
 
-function getTime() {
-  const now = new Date();
-  let currTime = now.getFullYear();
-  currTime += '-' + ((now.getMonth()+1)+'').padStart(2, '0');
-  currTime += '-' + (now.getDate()+'').padStart(2, '0');
-  currTime += ' ' + (now.getHours()+'').padStart(2, '0');
-  currTime += ':' + (now.getMinutes()+'').padStart(2, '0');
-  currTime += ':' + (now.getSeconds()+'').padStart(2, '0');
-  currTime += '.' + (now.getMilliseconds()+'').padStart(3, '0');
-  return currTime;
-}
+
+
 
 
 // ---------------------------------------------------------------------------------------

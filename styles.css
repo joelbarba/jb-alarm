@@ -31,7 +31,7 @@ body {
   padding: 4px 0;
 }
 
-#clear-10-btn, #clear-all-btn {
+#clear-1-btn, #clear-10-btn, #clear-all-btn {
   padding: 35px;
   font-size: 30px;
   width: 100%;
@@ -57,7 +57,18 @@ body {
   margin: 0px 10px 25px;
   min-width: 300px;
 }
+#last-action { color: gray; }
 #logs-list {
   text-align: left;
   font-size: 13px;
 }
+
+#warning {
+  font-size: 120px;
+  font-weight: bold;
+  /* color: #6d1414; */
+  background: red;
+  padding: 60px 0;
+  animation: blinker 0.6s linear infinite;
+}
+@keyframes blinker { 50% { opacity: 0.25; }}

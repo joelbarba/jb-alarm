@@ -11,6 +11,8 @@
     <button id="config-btn">Config</button>
   </div>
 
+  <div id="warning" style="display: none;">BREAK IN WARNING!!!</div>
+
   <div id="api-panel" style="display: none;">
     <span>apiKey:</span><input id="api-key"/><br/>
     <button id="api-key-btn">Save</button>
@@ -22,9 +24,10 @@
     <button id="login-btn">Log In</button>
   </div>
 
-  <div id="config-panel">
-    <button id="clear-10-btn">CAP TO 10 LOGS</button>
-    <button id="clear-all-btn">DELETE ALL LOGS</button>
+  <div id="config-panel" style="display: none;">
+    <button id="clear-1-btn"  >DELETE all but last log</button>
+    <button id="clear-10-btn" >DELETE all but last 10 logs</button>
+    <button id="clear-all-btn">DELETE all</button>
   </div>
 
   <div id="main-panel">

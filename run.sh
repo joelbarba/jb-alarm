@@ -59,6 +59,7 @@ done
 # UI to read and "sound" the alarm (mobile web app)
 # Instalar detector moviment
 # Instalar sirena alarma
+# Millorar script de control (run.sh) to cursor arrow selection
 
 
 # git add -A && git commit -m 'change scripts' && git push origin master
