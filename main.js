@@ -85,6 +85,7 @@ const db = firestore.getFirestore(app);
 
 let doorLogsCol; // Ref to the doorlog collection
 let unsubscribe;
+let newDoc;
 const auth = getAuth();
 const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, secrets.userAuth.pass).then((userCredential) => {
   console.log('Firebase: Logged in');
@@ -96,14 +97,19 @@ const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, 
 function updateState(snapshot) { // Update the status of the Alarm from Firebase
   const logs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   logs.sort((a, b) => new Date(b.time) - new Date(a.time)); // order from latest (right now) to oldest (long ago)
-  console.log('Current Status =', logs[0]);
+  // console.log('Current Status =', logs[0]);
+  const curr = logs[0];
+  if (curr?.change === 'alarm' && curr?.time !== newDoc?.time) {
+    if (curr?.alarm === 'active')   { console.log(getTime(), `ALARM activated (from Firebase)`); }
+    if (curr?.alarm === 'inactive') { console.log(getTime(), `ALARM deactivated (from Firebase)`); }
+  }
   isActive = logs[0]?.alarm === 'active';
 }
 
 async function addLog(change = 'door') {
   try {
     await fireBasePromise;  
-    const newDoc = {
+    newDoc = {
       door: isOpen ? 'open' : 'closed',
       time: getTime(),
       alarm: isActive ? 'active' : 'inactive',
