@@ -1,7 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
 import * as firestore from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
-import { getTime } from './lib.js';
+
 
 let doorLogsCollection; // Ref to the doorlog collection
 let isLoggedIn = false;
@@ -11,6 +11,7 @@ const $ = (id) => document.getElementById(id); // shortcut
 let app;  // Firebase App
 let db;   // Firebase DB
 let auth; // Firebase Auth
+let unsubscribe;
 
 if (localStorage.apiKey) {
   initFirebase();
@@ -211,4 +212,16 @@ function printAlarmStatus(alarm) {
   } else {
     $('alarm-status').innerHTML = `Alarm: ???`;
   }
+}
+
+const getTime = () => {
+  const now = new Date();
+  let currTime = now.getFullYear();
+  currTime += '-' + ((now.getMonth()+1)+'').padStart(2, '0');
+  currTime += '-' + (now.getDate()+'').padStart(2, '0');
+  currTime += ' ' + (now.getHours()+'').padStart(2, '0');
+  currTime += ':' + (now.getMinutes()+'').padStart(2, '0');
+  currTime += ':' + (now.getSeconds()+'').padStart(2, '0');
+  currTime += '.' + (now.getMilliseconds()+'').padStart(3, '0');
+  return currTime;
 }

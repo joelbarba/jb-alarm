@@ -6,10 +6,10 @@ const app = express();
 const port = 3000;
 
 app.get('/', function (req, res, next) {
-  return res.sendFile(__dirname + '/index.html');
+  return res.sendFile(__dirname + '/ui/index.html');
 });
 app.get('/*', function (req, res, next) {
-  return res.sendFile(__dirname + req.originalUrl);
+  return res.sendFile(__dirname + '/ui/' + req.originalUrl);
 });
 
 

@@ -53,13 +53,13 @@ do
 done
 
 # TODOS:
-# OK  Add code to github + update script to pull auto from pi
-# OK  Soldar placa
-# Instalar sensor porta + cables
-# UI to read and "sound" the alarm (mobile web app)
-# Instalar detector moviment
-# Instalar sirena alarma
-# Millorar script de control (run.sh) to cursor arrow selection
+# OK - Add code to github + update script to pull auto from pi
+# OK - Soldar placa
+# - UI to read and "sound" the alarm (mobile web app)
+# - Instalar sensor porta + cables
+# - Instalar detector moviment
+# - Instalar sirena alarma
+# - Millorar script de control (run.sh) to cursor arrow selection
 
 
 # git add -A && git commit -m 'change scripts' && git push origin master
