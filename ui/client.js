@@ -79,11 +79,22 @@ function updateState(snapshot) {
   printLogs();
   printDoorStatus(logs[0]?.door);
   printAlarmStatus(logs[0]?.alarm);
-  if (logs[0]?.alarm === 'active' && logs[0]?.door === 'open') {
-    $('warning').style.display = 'block';
-    console.warn(new Date(), 'ALARM RINGING - The door was open with the alarm active!!!');
-  }
+  // if (logs[0]?.alarm === 'active' && logs[0]?.door === 'open') {
+  //   $('warning').style.display = 'block';
+  //   console.warn(new Date(), 'ALARM RINGING - The door was open with the alarm active!!!');
+  // }
   if (logs[0]?.alarm === 'inactive') { $('warning').style.display = 'none'; }
+  
+  // If the alarm is active, and while it was still active, there was a moment when the door opened: RING
+  if (logs[0]?.alarm === 'active') {
+    for (let t = 0; t < logs.length; t++) {
+      if (logs[t]?.alarm === 'inactive') { break; }
+      if (logs[t]?.door === 'open') {
+        $('warning').style.display = 'block';
+        console.warn(new Date(), 'ALARM RINGING - The door was open with the alarm active!!!');
+      }
+    }
+  }
 }
 
 async function switchAlarm(newValue) {
@@ -174,7 +185,14 @@ const dateColor = '#00adad';    // blue
 function printLogs() {
   $('logs-list').innerHTML = logs.map(log => {
     const alarm = log.alarm === 'active' ? '_active_' : 'inactive';
-    return `<span style="color: ${dateColor}">${log.time}</span> - (${alarm}) door: ${log.door}`;
+    if (log.change === 'door') {
+      let colSpan = `<span style="color: ${log.door === 'open' ? 'white' : closedColor}">`;
+      const ring = log.door === 'open' && log.alarm === 'active' ? ' <---- RING!' : ''
+      if (ring) { colSpan = `<span style="color: ${openColor}">`; }
+      return `<span style="color: ${dateColor}">${log.time}</span> - ${colSpan}(${alarm}) door: ${log.door}${ring}</span>`;
+    } else {
+      return `<span style="color: ${dateColor}">${log.time}</span> - (${alarm}) <span style="color: gray">door: ${log.door}</span>`;
+    }
   }).join(`<br/>`);
 
   $('last-action').innerHTML = `Last action: `;

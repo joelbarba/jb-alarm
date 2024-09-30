@@ -115,6 +115,11 @@ function updateState(snapshot) { // Update the status of the Alarm from Firebase
     if (curr?.alarm === 'inactive') { console.log(getTime(), `ALARM deactivated (from Firebase)`); }
   }
   isActive = logs[0]?.alarm === 'active';
+  if (ledInt) { clearInterval(ledInt); }
+  if (isActive) {
+    greenLed.writeSync(1);
+    ledInt = setInterval(_ => { greenLed.writeSync(1); setTimeout(_ => greenLed.writeSync(0), 70)}, 1500);
+  }
 }
 
 async function addLog(change = 'door') {
