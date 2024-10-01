@@ -51,7 +51,7 @@ process.on('SIGINT', _ => {
 // When active, the door opening will make the siren ring.
 // When inactive, the door opening/closing does nothing (just turns the red led on/off).
 function activation(newValue = !isActive, origin = 'box switch', internal = true) {
-  const writeLog =  internal && isActive != newValue;
+  const writeLog = internal && isActive !== newValue;
   isActive = newValue;
   if (ledInt) { clearInterval(ledInt); }
   if (isActive) {
@@ -117,12 +117,19 @@ function updateState(snapshot) { // Update the status of the Alarm from Firebase
   logs.sort((a, b) => new Date(b.time) - new Date(a.time)); // order from latest (right now) to oldest (long ago)
   // console.log('Current Status =', logs[0]);
   const curr = logs[0];
-  if (curr?.change === 'alarm' && curr?.time !== newDoc?.time) {
-    if (curr?.alarm === 'active')   { console.log(getTime(), `ALARM activated (from Firebase)`); }
-    if (curr?.alarm === 'inactive') { console.log(getTime(), `ALARM deactivated (from Firebase)`); }
+
+  // Only react on external updates (skip internal)
+  if (curr?.time !== newDoc?.time) {
+    // If the activation changes remotely (from Firebase), sync it and check everything
+    if (curr?.change === 'alarm' && curr?.alarm !== (isActive ? 'active' : 'inactive')) {
+      if (curr?.alarm === 'active')   { console.log(getTime(), `ALARM activated (from Firebase)`); }
+      if (curr?.alarm === 'inactive') { console.log(getTime(), `ALARM deactivated (from Firebase)`); }
+      isActive = logs[0]?.alarm === 'active';
+      activation(isActive, 'Firebase', false);
+    }
+    // If we get the status of the door is different on Firebase, update it (fix it) by posting a new one
+    if (curr?.door !== (isOpen ? 'open' : 'closed')) { addLog('door'); }
   }
-  isActive = logs[0]?.alarm === 'active';
-  activation(isActive, 'Firebase', false);
 }
 
 async function addLog(change = 'door') {
