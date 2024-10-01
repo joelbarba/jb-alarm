@@ -184,7 +184,7 @@ const dateColor = '#00adad';    // blue
 
 function printLogs() {
   $('logs-list').innerHTML = logs.map(log => {
-    const alarm = log.alarm === 'active' ? '_active_' : 'inactive';
+    const alarm = log.alarm === 'active' ? `<span style="color: ${activeColor}">_active_</span>` : 'inactive';
     if (log.change === 'door') {
       let colSpan = `<span style="color: ${log.door === 'open' ? 'white' : closedColor}">`;
       const ring = log.door === 'open' && log.alarm === 'active' ? ' <---- RING!' : ''

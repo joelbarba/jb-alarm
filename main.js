@@ -120,17 +120,15 @@ function updateState(snapshot) { // Update the status of the Alarm from Firebase
   const logs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   logs.sort((a, b) => new Date(b.time) - new Date(a.time)); // order from latest (right now) to oldest (long ago)
   // console.log('Current Status =', logs[0]);
-  const curr = logs[0];
+  const curr = logs[0]; // last (current) change
 
   // Only react on external updates (skip internal)
   if (curr?.time !== newDoc?.time) {
+
     // If the activation changes remotely (from Firebase), sync it and check everything
-    if (curr?.change === 'alarm' && curr?.alarm !== (isActive ? 'active' : 'inactive')) {
-      if (curr?.alarm === 'active')   { console.log(getTime(), `ALARM activated (from Firebase)`); }
-      if (curr?.alarm === 'inactive') { console.log(getTime(), `ALARM deactivated (from Firebase)`); }
-      isActive = logs[0]?.alarm === 'active';
-      activation(isActive, 'Firebase', false);
-    }
+    const firebaseAlarmActive = logs[0]?.alarm === 'active';
+    if (curr?.change === 'alarm' && firebaseAlarmActive !== isActive) { activation(firebaseAlarmActive, 'Firebase', false); }
+
     // If we get the status of the door is different on Firebase, update it (fix it) by posting a new one
     if (curr?.door !== (isOpen ? 'open' : 'closed')) { addLog('door'); }
   }
