@@ -16,6 +16,8 @@ do
   echo "6 -->  SCAN:        scan network for IP"
   echo "7 -->  SSH PI:      ssh pi@$ip"
   echo "8 -->  GIT PUSH:    Commit current code + push + pull from pi"
+  echo "9 -->  PING:        ping $ip"
+  echo "10 ->  SHUTDOWN:    sudo shutdown"
   read x
   echo ""
   if [[ "$x" == "1" ]]; then
@@ -49,6 +51,12 @@ do
     git commit -m "$msg"
     git push origin master
     ssh -n -f pi@$ip "sh update_jbalarm.sh"
+  fi
+  if [[ "$x" == "9" ]]; then
+    ping $ip
+  fi
+  if [[ "$x" == "10" ]]; then
+    ssh -n -f pi@$ip "sudo shutdown"
   fi
 done
 

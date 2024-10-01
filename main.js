@@ -4,10 +4,12 @@ const door     = new Gpio(16, 'in', 'both',   { debounceTimeout: 100 });
 const button   = new Gpio(4,  'in', 'rising', { debounceTimeout: 100 });
 const greenLed = new Gpio(17, 'out');
 const redLed   = new Gpio(18, 'out');
-
+const siren    = new Gpio(5,  'out');
+const RINGING_TIME = 45*1000;
 // Mocking
 // const greenLed = { writeSync: (v) => console.log(`GREEN: ${!!v}`) };
 // const redLed = { writeSync: (v) => console.log(`RED: ${!!v}`) };
+// const siren = { writeSync: (v) => console.log(`RED: ${!!v}`) };
 // const door = (function() { let callback = () => {}; return { trigger: (v) => callback(false, v), watch: (fn) => callback = fn, readSync: () => {} }; }());
 // const button = (function() { let callback = () => {}; return { trigger: (v) => callback(false, v), watch: (fn) => callback = fn }; }());
 
@@ -23,7 +25,7 @@ let ledInt; // blinking let interval
 isOpen = !!door.readSync();
 console.log(getTime(), `The door is ${isOpen ? 'open' : 'closed'}`);
 
-turnLeds();
+syncLeds();
 
 button.watch((err, value) => {
   if (err) { console.error('Button error'); throw err; }
@@ -34,33 +36,48 @@ door.watch((err, value) => {
   if (err) { console.error('Door sensor error'); throw err; }
   isOpen = !!value;
   console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'}`);
+  checkAndRing();
   addLog('door');
-  turnLeds();
+  syncLeds();
 });
 
 process.on('SIGINT', _ => {
-  activation(false);
+  activation(false, 'process end');
   turnLedsOff();
   process.exit(0);
 });
 
-
-function activation(newValue = !isActive) {
-  const writeLog = isActive != newValue;
+// Change the status (active/inactive) of the alarm.
+// When active, the door opening will make the siren ring.
+// When inactive, the door opening/closing does nothing (just turns the red led on/off).
+function activation(newValue = !isActive, origin = 'box switch', internal = true) {
+  const writeLog =  internal && isActive != newValue;
   isActive = newValue;
   if (ledInt) { clearInterval(ledInt); }
   if (isActive) {
-    console.log(getTime(), `ALARM activated`);
+    checkAndRing();
     greenLed.writeSync(1);
-    ledInt = setInterval(_ => { greenLed.writeSync(1); setTimeout(_ => greenLed.writeSync(0), 70)}, 1500);
+    ledInt = setInterval(_ => { greenLed.writeSync(1); setTimeout(_ => greenLed.writeSync(0), 70)}, 1500);  
+    console.log(getTime(), `ALARM activated (from ${origin})`);
   } else {
-    console.log(getTime(), `ALARM deactivated`);
+    console.log(getTime(), `ALARM deactivated (from ${origin})`);
   }
-  turnLeds();
+  syncLeds();
   if (writeLog) { addLog('alarm'); }
 }
 
-function turnLeds() {
+
+function checkAndRing() {
+  if (isActive && isOpen) {
+    siren.writeSync(1); // If the door opens, ring
+    setTimeout(() => siren.writeSync(0), RINGING_TIME);    
+  } else {
+    siren.writeSync(0);
+  }
+}
+
+
+function syncLeds() {
   redLed.writeSync(isOpen ? 1 : 0); // Turn red on if door open
   if (!isActive) { greenLed.writeSync(0); }
 }
@@ -70,17 +87,7 @@ function turnLedsOff() {
   greenLed.writeSync(0);
 }
 
-const getTime = () => {
-  const now = new Date();
-  let currTime = now.getFullYear();
-  currTime += '-' + ((now.getMonth()+1)+'').padStart(2, '0');
-  currTime += '-' + (now.getDate()+'').padStart(2, '0');
-  currTime += ' ' + (now.getHours()+'').padStart(2, '0');
-  currTime += ':' + (now.getMinutes()+'').padStart(2, '0');
-  currTime += ':' + (now.getSeconds()+'').padStart(2, '0');
-  currTime += '.' + (now.getMilliseconds()+'').padStart(3, '0');
-  return currTime;
-}
+
 
 // ---------------------------------------------------------------------------------------
 // Firebase communication
@@ -115,11 +122,7 @@ function updateState(snapshot) { // Update the status of the Alarm from Firebase
     if (curr?.alarm === 'inactive') { console.log(getTime(), `ALARM deactivated (from Firebase)`); }
   }
   isActive = logs[0]?.alarm === 'active';
-  if (ledInt) { clearInterval(ledInt); }
-  if (isActive) {
-    greenLed.writeSync(1);
-    ledInt = setInterval(_ => { greenLed.writeSync(1); setTimeout(_ => greenLed.writeSync(0), 70)}, 1500);
-  }
+  activation(isActive, 'Firebase', false);
 }
 
 async function addLog(change = 'door') {
@@ -144,7 +147,17 @@ async function getLogs() {
 }
 
 
-
+const getTime = () => {
+  const now = new Date();
+  let currTime = now.getFullYear();
+  currTime += '-' + ((now.getMonth()+1)+'').padStart(2, '0');
+  currTime += '-' + (now.getDate()+'').padStart(2, '0');
+  currTime += ' ' + (now.getHours()+'').padStart(2, '0');
+  currTime += ':' + (now.getMinutes()+'').padStart(2, '0');
+  currTime += ':' + (now.getSeconds()+'').padStart(2, '0');
+  currTime += '.' + (now.getMilliseconds()+'').padStart(3, '0');
+  return currTime;
+}
 
 
 // ---------------------------------------------------------------------------------------
@@ -158,8 +171,8 @@ const port = 4358;
 // curl -X GET http://192.168.1.135:4358/deactivate
 // curl -X GET http://192.168.1.135:4358/ledsoff
 webServer.get('/ping', (req, res) => res.status(200).send('pong'));
-webServer.get('/activate',   (req, res) => { activation(true);  res.status(200).send('activated'); });
-webServer.get('/deactivate', (req, res) => { activation(false); res.status(200).send('deactivated'); });
+webServer.get('/activate',   (req, res) => { activation(true,  'http'); res.status(200).send('activated'); });
+webServer.get('/deactivate', (req, res) => { activation(false, 'http'); res.status(200).send('deactivated'); });
 webServer.get('/ledsoff',    (req, res) => { turnLedsOff();     res.status(200).send('leds off'); });
 
 // webServer.get('/exit', (req, res) => { res.send('ok'); process.exit(0); });
