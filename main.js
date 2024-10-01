@@ -147,7 +147,7 @@ async function getLogs() {
 }
 
 
-const getTime = () => {
+function getTime() {
   const now = new Date();
   let currTime = now.getFullYear();
   currTime += '-' + ((now.getMonth()+1)+'').padStart(2, '0');
