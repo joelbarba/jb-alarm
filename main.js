@@ -1,6 +1,6 @@
 // const Gpio = require('onoff').Gpio;
 import { Gpio } from 'onoff';
-const door     = new Gpio(16, 'in', 'both',   { debounceTimeout: 100 });
+const door     = new Gpio(16, 'in', 'both',   { debounceTimeout: 500 });
 const button   = new Gpio(4,  'in', 'rising', { debounceTimeout: 100 });
 const greenLed = new Gpio(17, 'out');
 const redLed   = new Gpio(18, 'out');
@@ -34,11 +34,15 @@ button.watch((err, value) => {
 
 door.watch((err, value) => {
   if (err) { console.error('Door sensor error'); throw err; }
-  isOpen = !!value;
-  console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'}`);
-  checkAndRing();
-  addLog('door');
-  syncLeds();
+  // if (isOpen === !!value) {
+  //   console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'} (sensor glitch - it was already)`);
+  // } else {
+    isOpen = !!value;
+    console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'}`);
+    if (isOpen) { checkAndRing(); }
+    addLog('door');
+    syncLeds();
+  // }
 });
 
 process.on('SIGINT', _ => {
@@ -53,9 +57,9 @@ process.on('SIGINT', _ => {
 function activation(newValue = !isActive, origin = 'box switch', internal = true) {
   const writeLog = internal && isActive !== newValue;
   isActive = newValue;
+  checkAndRing();
   if (ledInt) { clearInterval(ledInt); }
   if (isActive) {
-    checkAndRing();
     greenLed.writeSync(1);
     ledInt = setInterval(_ => { greenLed.writeSync(1); setTimeout(_ => greenLed.writeSync(0), 70)}, 1500);  
     console.log(getTime(), `ALARM activated (from ${origin})`);
