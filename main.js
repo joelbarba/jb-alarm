@@ -180,11 +180,13 @@ async function getLogs() {
   return logsSnapshot.docs.map(doc => doc.data());
 }
 
+let timeoutIni;
+let timeoutEnd;
 function rescheduleActivation() {
   console.log('Scheduling automatic activation', schedule);
-  if (schedule.timeoutIni) { clearTimeout(schedule.timeoutIni); }
-  if (schedule.timeoutEnd) { clearTimeout(schedule.timeoutEnd); }
-  if (schedule.enabled) {
+  if (timeoutIni) { clearTimeout(timeoutIni); }
+  if (timeoutEnd) { clearTimeout(timeoutEnd); }
+  if (enabled) {
     const now = new Date();
     function minsToNow(time = '00:00') { // Calculat the minutes left to reach the time
       const minutesTime = (parseInt(time.split(':')[0])*60) + parseInt(time.split(':')[1]);
@@ -196,8 +198,8 @@ function rescheduleActivation() {
     const endTime = minsToNow(schedule.end);
     console.log(getTime(), `The alarm will activate in ${iniTime} minutes`);
     console.log(getTime(), `The alarm will deactivate in ${endTime} minutes`);
-    schedule.timeoutIni = setTimeout(() => activation(true,  'scheduler'), iniTime * 60 * 1000);
-    schedule.timeoutEnd = setTimeout(() => activation(false, 'scheduler'), endTime * 60 * 1000);
+    timeoutIni = setTimeout(() => activation(true,  'scheduler'), iniTime * 60 * 1000);
+    timeoutEnd = setTimeout(() => activation(false, 'scheduler'), endTime * 60 * 1000);
   }
 }
 
