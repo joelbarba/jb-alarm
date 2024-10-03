@@ -122,7 +122,8 @@ const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, 
   // React on changes from 000CTRL_alarm_status
   // If the activation changes remotely (from Firebase), sync it and check everything
   if (unsubscribe) { unsubscribe(); }
-  unsubscribe = firestore.onSnapshot(ctrlAlarmRef, (doc) => { 
+  unsubscribe = firestore.onSnapshot(ctrlAlarmRef, (snap) => { 
+    const doc = snap.data();
     if (doc.time !== newDoc?.time) {
       const isFirebaseAlarmActive = doc.alarm === 'active';
       if (isFirebaseAlarmActive !== isActive) { activation(isFirebaseAlarmActive, 'Firebase', false); }
@@ -132,11 +133,9 @@ const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, 
   // Once connected, check if the door status on Firebase (CTRL_door_status) is the same
   // If not the same, change it and add a log to reflect it
   const docSnap = await firestore.getDoc(ctrlDoorRef);
-  if (docSnap.exists()) { 
-    const doc = docSnap.data();
-    const isFirebaseDoorOpen = doc.door !== 'closed';
-    if (isFirebaseDoorOpen !== isOpen) { addLog('door'); }
-  }
+  const doc = docSnap.data();
+  const isFirebaseDoorOpen = doc.door !== 'closed';
+  if (isFirebaseDoorOpen !== isOpen) { addLog('door'); }
 
   // Ping a value to CTRL_main_app every 30 seconds
   setInterval(() => firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' }), 30*1000);
