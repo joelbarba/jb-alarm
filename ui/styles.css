@@ -11,6 +11,14 @@ body {
   display: flex;
   justify-content: space-between;
   margin-left: 25px;
+  align-items: center;
+}
+#ping {
+  /* position: fixed;
+  top: 45px; */
+  border-radius: 5px;
+  background: #00ff39;
+  padding: 4px 10px;
 }
 #config-btn {
   padding: 15px 70px;
@@ -49,15 +57,25 @@ body {
   /* background: red; */
   /* background: #00c100; */
   padding: 120px 0;
-  margin: 0 10px 150px;
+  margin: 0 10px 15px;  
 }
+#current-time {
+  font-size: 12px;
+}
+#last-action, #last-action-ago {
+  color: gray;
+  font-size: 30px;
+  font-weight: bold;
+}
+#last-action { margin-top: 100px; }
+#last-action-ago { margin-bottom: 100px; color: #00adad; }
+
 #activate-btn, #deactivate-btn {
   font-size: 35px;
   padding: 35px 25px;
   margin: 0px 10px 25px;
   min-width: 300px;
 }
-#last-action { color: gray; }
 #logs-list {
   text-align: left;
   font-size: 11px;

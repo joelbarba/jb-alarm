@@ -1,17 +1,18 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
 import * as firestore from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
+const $ = (id) => document.getElementById(id); // shortcut
 
 
-let doorLogsCollection; // Ref to the doorlog collection
 let isLoggedIn = false;
 let logs = [];
-const $ = (id) => document.getElementById(id); // shortcut
+let door = '';
+let alarm = '';
+let lastPing = getTime();
 
 let app;  // Firebase App
 let db;   // Firebase DB
 let auth; // Firebase Auth
-let unsubscribe;
 
 if (localStorage.apiKey) {
   initFirebase();
@@ -39,8 +40,6 @@ function initFirebase() {
   app = initializeApp(firebaseConfig);  // Initialize Firebase
   db = firestore.getFirestore(app);
   auth = getAuth();
-
-  let unsubscribe;
   
   // Detect if there is a current session alive
   onAuthStateChanged(auth, (user) => {
@@ -50,10 +49,14 @@ function initFirebase() {
     $('config-btn').style.display = isLoggedIn ? 'block' : 'none';
     if (user) {
       console.log('Auth Session Detected', user);
-      doorLogsCollection = firestore.collection(db, 'doorlog');
-      // loadLogs(); // the subscription triggers the first load already
-      if (unsubscribe) { unsubscribe(); }
-      unsubscribe = firestore.onSnapshot(doorLogsCollection, (snapshot) => updateState(snapshot), (err) => console.error(err));
+
+      // React on control document changes
+      firestore.onSnapshot(firestore.doc(db, 'doorlog', '000CTRL_door_status'),  doc => { door = doc.data()?.door || 'closed';     printDoorStatus(door);   });
+      firestore.onSnapshot(firestore.doc(db, 'doorlog', '000CTRL_alarm_status'), doc => { alarm = doc.data()?.alarm || 'inactive'; printAlarmStatus(alarm); });
+      firestore.onSnapshot(firestore.doc(db, 'doorlog', '000CTRL_main_app'),     doc => { lastPing = doc.data()?.ping || getTime(); });
+   
+      // React on logs change
+      firestore.onSnapshot(firestore.collection(db, 'doorlog'), (snapshot) => updateState(snapshot), (err) => console.error(err));
     } else {
       console.log('No Auth Session');
     }
@@ -67,22 +70,16 @@ function login(username, password) {
 }
 
 async function loadLogs() {
-  const snapshot = await firestore.getDocs(doorLogsCollection);
+  const snapshot = await firestore.getDocs(firestore.collection(db, 'doorlog'));
   updateState(snapshot);
 }
 
 function updateState(snapshot) {
-  logs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+  logs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })).filter(doc => doc.id.slice(0, 8) !== '000CTRL_');
   logs.sort((a, b) => new Date(b.time) - new Date(a.time)); // order from latest (right now) to oldest (long ago)
   console.log('LOGS:', logs);
-  console.log('Current Status =', logs[0]);
   printLogs();
-  printDoorStatus(logs[0]?.door);
-  printAlarmStatus(logs[0]?.alarm);
-  // if (logs[0]?.alarm === 'active' && logs[0]?.door === 'open') {
-  //   $('warning').style.display = 'block';
-  //   console.warn(new Date(), 'ALARM RINGING - The door was open with the alarm active!!!');
-  // }
+
   if (logs[0]?.alarm === 'inactive') { $('warning').style.display = 'none'; }
   
   // If the alarm is active, and while it was still active, there was a moment when the door opened: RING
@@ -98,22 +95,17 @@ function updateState(snapshot) {
 }
 
 async function switchAlarm(newValue) {
-  const isActive = logs[0]?.alarm === 'active';
-  if (newValue !== isActive || !logs.length) {
-    const alarm = newValue ? 'active' : 'inactive';
-    const newDoc = {
-      door: logs[0]?.door || '???',
-      time: getTime(),
-      alarm,
-      change: 'alarm'
-    };
-    await firestore.addDoc(doorLogsCollection, newDoc);
+  const isActive = alarm === 'active';
+  if (newValue !== isActive) {
+    alarm = newValue ? 'active' : 'inactive';
+    const time = getTime();
+    const newDoc = { door, time, alarm, change: 'alarm' };
+    await firestore.setDoc(firestore.doc(db, 'doorlog', time), newDoc); // Add new log
+    await firestore.setDoc(firestore.doc(db, 'doorlog', '000CTRL_alarm_status'), { time, alarm }); // change status
     console.log('Alarm changed to: ', alarm);
     printAlarmStatus(alarm);
   }  
 }
-
-
 
 
 
@@ -205,7 +197,8 @@ function printLogs() {
       if (curr.alarm === 'active')   { $('last-action').innerHTML += `<span style="color: ${activeColor};">Activated</span>`; }
       if (curr.alarm === 'inactive') { $('last-action').innerHTML += `<span style="color: ${inactiveColor};">Deactivated</span>`; }
     }
-    $('last-action').innerHTML += `<br/>at <span style="color: ${dateColor}">${curr.time}</span>`;
+    // $('last-action').innerHTML += `<br/>at <span style="color: ${dateColor}">${curr.time}</span>`;
+    $('last-action-ago').innerHTML = `<span style="color: ${dateColor}">${timeAgo(new Date(curr.time))}</span>`;
   }
 }
 function printDoorStatus(door) {
@@ -232,7 +225,21 @@ function printAlarmStatus(alarm) {
   }
 }
 
-const getTime = () => {
+setInterval(() => {
+  $('current-time').innerHTML = `Current Time: ${getTime().slice(0, -4)}`;
+  if (logs.length) { $('last-action-ago').innerHTML = timeAgo(new Date(logs[0].time)); }
+
+  if ((new Date() - new Date(lastPing)) < 40*1000) {
+    $('ping').innerHTML = 'Connected';
+    $('ping').style.background = '#00ff39';
+  } else {
+    $('ping').innerHTML = `Disconnected<br\>${timeAgo(new Date(lastPing))}` ;
+    $('ping').style.background = 'red';
+  }
+
+}, 500);
+
+function getTime() {
   const now = new Date();
   let currTime = now.getFullYear();
   currTime += '-' + ((now.getMonth()+1)+'').padStart(2, '0');
@@ -243,3 +250,18 @@ const getTime = () => {
   currTime += '.' + (now.getMilliseconds()+'').padStart(3, '0');
   return currTime;
 }
+
+function timeAgo(time) {
+  const now = new Date();
+  const sec = Math.round((now - time) / 1000);
+  if (sec <= 1) { return `${sec} second ago`; }
+  if (sec < 60) { return `${sec} seconds ago`; }
+  const min = Math.round((now - time) / 60000);
+  if (min <= 1) { return `${min} minute ago`; }
+  if (min < 60) { return `${min} minutes ago`; }
+  const hour = Math.round((now - time) / 3600000);
+  if (hour <= 1) { return `${hour} hour ago`; }
+  if (hour < 60) { return `${hour} hours ago`; }
+}
+
+

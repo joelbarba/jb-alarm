@@ -5,7 +5,7 @@ const button   = new Gpio(4,  'in', 'rising', { debounceTimeout: 100 });
 const greenLed = new Gpio(17, 'out');
 const redLed   = new Gpio(18, 'out');
 const siren    = new Gpio(5,  'out');
-const RINGING_TIME = 45*1000;
+const MAX_RINGING_TIME = 45*1000;
 // Mocking
 // const greenLed = { writeSync: (v) => console.log(`GREEN: ${!!v}`) };
 // const redLed = { writeSync: (v) => console.log(`RED: ${!!v}`) };
@@ -34,15 +34,15 @@ button.watch((err, value) => {
 
 door.watch((err, value) => {
   if (err) { console.error('Door sensor error'); throw err; }
-  // if (isOpen === !!value) {
-  //   console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'} (sensor glitch - it was already)`);
-  // } else {
+  if (isOpen === !!value) {
+    console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'} (sensor glitch - it was already)`);
+  } else {
     isOpen = !!value;
     console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'}`);
     if (isOpen) { checkAndRing(); }
     addLog('door');
     syncLeds();
-  // }
+  }
 });
 
 process.on('SIGINT', _ => {
@@ -74,7 +74,7 @@ function activation(newValue = !isActive, origin = 'box switch', internal = true
 function checkAndRing() {
   if (isActive && isOpen) {
     siren.writeSync(1); // If the door opens, ring
-    setTimeout(() => siren.writeSync(0), RINGING_TIME);    
+    setTimeout(() => siren.writeSync(0), MAX_RINGING_TIME);    
   } else {
     siren.writeSync(0);
   }
@@ -106,45 +106,57 @@ const app = initializeApp(secrets.firebaseConfig);  // Initialize Firebase
 const db = firestore.getFirestore(app);
 
 let doorLogsCol; // Ref to the doorlog collection
+let ctrlDoorRef;  // Ref to control document for the door status   
+let ctrlAlarmRef; // Ref to control document for the alarm status
+let ctrlAppRef;   // Ref to control document for the running main.js app
 let unsubscribe;
 let newDoc;
 const auth = getAuth();
-const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, secrets.userAuth.pass).then((userCredential) => {
+const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, secrets.userAuth.pass).then(async (userCredential) => {
   console.log('Firebase: Logged in');
   doorLogsCol = firestore.collection(db, 'doorlog');
+  ctrlDoorRef  = firestore.doc(db, 'doorlog', '000CTRL_door_status');
+  ctrlAlarmRef = firestore.doc(db, 'doorlog', '000CTRL_alarm_status');
+  ctrlAppRef   = firestore.doc(db, 'doorlog', '000CTRL_main_app');
+
+  // React on changes from 000CTRL_alarm_status
+  // If the activation changes remotely (from Firebase), sync it and check everything
   if (unsubscribe) { unsubscribe(); }
-  unsubscribe = firestore.onSnapshot(doorLogsCol, (snapshot) => updateState(snapshot), (err) => console.error(err));
+  unsubscribe = firestore.onSnapshot(ctrlAlarmRef, (doc) => { 
+    if (doc.time !== newDoc?.time) {
+      const isFirebaseAlarmActive = doc.alarm === 'active';
+      if (isFirebaseAlarmActive !== isActive) { activation(isFirebaseAlarmActive, 'Firebase', false); }
+    }
+  });
+
+  // Once connected, check if the door status on Firebase (CTRL_door_status) is the same
+  // If not the same, change it and add a log to reflect it
+  const docSnap = await firestore.getDoc(ctrlDoorRef);
+  if (docSnap.exists()) { 
+    const doc = docSnap.data();
+    const isFirebaseDoorOpen = doc.door !== 'closed';
+    if (isFirebaseDoorOpen !== isOpen) { addLog('door'); }
+  }
+
+  // Ping a value to CTRL_main_app every 30 seconds
+  setInterval(() => firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' }), 30*1000);
+    
 }).catch((error) => console.error(`Login error: ${error.code} -> ${error.message}`));
 
-function updateState(snapshot) { // Update the status of the Alarm from Firebase
-  const logs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-  logs.sort((a, b) => new Date(b.time) - new Date(a.time)); // order from latest (right now) to oldest (long ago)
-  // console.log('Current Status =', logs[0]);
-  const curr = logs[0]; // last (current) change
 
-  // Only react on external updates (skip internal)
-  if (curr?.time !== newDoc?.time) {
-
-    // If the activation changes remotely (from Firebase), sync it and check everything
-    const firebaseAlarmActive = logs[0]?.alarm === 'active';
-    if (curr?.change === 'alarm' && firebaseAlarmActive !== isActive) { activation(firebaseAlarmActive, 'Firebase', false); }
-
-    // If we get the status of the door is different on Firebase, update it (fix it) by posting a new one
-    if (curr?.door !== (isOpen ? 'open' : 'closed')) { addLog('door'); }
-  }
-}
 
 async function addLog(change = 'door') {
   try {
-    await fireBasePromise;  
-    newDoc = {
-      door: isOpen ? 'open' : 'closed',
-      time: getTime(),
-      alarm: isActive ? 'active' : 'inactive',
-      change, // door | alarm
-    };
-    const docRef = await firestore.addDoc(doorLogsCol, newDoc);
-    // console.log(getTime(), `Log ${docRef.id}`);
+    await fireBasePromise;
+    const time = getTime();
+    const door = isOpen ? 'open' : 'closed';
+    const alarm = isActive ? 'active' : 'inactive';
+    if (change === 'door')  { await firestore.setDoc(ctrlDoorRef,  { time: getTime(), door }); }
+    if (change === 'alarm') { await firestore.setDoc(ctrlAlarmRef, { time: getTime(), alarm }); }
+
+    newDoc = { door, time, alarm, change };
+    // await firestore.addDoc(doorLogsCol, newDoc);
+    await firestore.setDoc(firestore.doc(db, 'doorlog', time), newDoc);
   } catch(err) {
     console.log(getTime(), `Error logging to firebase: ${err}`);
   }

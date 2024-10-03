@@ -13,6 +13,7 @@ do
   echo "3 -->  CHECK:       ssh -n -f pi@$ip \"pgrep -f main.js\""
   echo "4 -->  ACTIVATE  :  curl -X GET http://$ip:4358/activate"
   echo "5 -->  DEACTIVATE:  curl -X GET http://$ip:4358/deactivate"
+  echo "11 --> PING app:    curl -X GET http://$ip:4358/ping"
   echo "6 -->  SCAN:        scan network for IP"
   echo "7 -->  SSH PI:      ssh pi@$ip"
   echo "8 -->  GIT PUSH:    Commit current code + push + pull from pi"
@@ -34,6 +35,9 @@ do
   fi
   if [[ "$x" == "5" ]]; then
     curl -X GET http://$ip:4358/deactivate
+  fi
+  if [[ "$x" == "11" ]]; then
+    curl -X GET http://$ip:4358/ping
   fi
   if [[ "$x" == "6" ]]; then
     nmap -sn 192.168.1.0/24
@@ -58,16 +62,10 @@ do
   if [[ "$x" == "10" ]]; then
     ssh -n -f pi@$ip "sudo shutdown"
   fi
+
 done
 
-# TODOS:
-# OK - Add code to github + update script to pull auto from pi
-# OK - Soldar placa
-# - UI to read and "sound" the alarm (mobile web app)
-# - Instalar sensor porta + cables
-# - Instalar detector moviment
-# - Instalar sirena alarma
-# - Millorar script de control (run.sh) to cursor arrow selection
+
 
 
 # git add -A && git commit -m 'change scripts' && git push origin master

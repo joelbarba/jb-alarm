@@ -8,6 +8,7 @@
 <body>
   <div id="header">
     <h1>JB-ALARM</h1>
+    <div id="ping">Connected</div>
     <button id="config-btn">Config</button>
   </div>
 
@@ -32,19 +33,19 @@
 
   <div id="main-panel">
     <h2 id="door-status">The door is: ...</h2>
+    <div id="current-time">Current Time:</div>
+
+    <div id="last-action">Last action: Opened at xxx</div>
+    <div id="last-action-ago"></div>
+
     <h2 id="alarm-status">Alarm: ...</h2>
     <div>
       <button id="deactivate-btn">Deactivate</button>
       <button id="activate-btn">Activate</button>
     </div>
-    <h3 id="last-action">Last action: Opened at xxx</h3>
+
     <h3 style="margin-bottom: 0;">Logs:</h3>
-    <p id="logs-list">
-      xxxxx
-      xxxxx
-      xxxxx
-      xxxxx
-    </p>
+    <p id="logs-list">xxxxx</p>
   </div>
 
   <script type="module" src="client.js"></script>
