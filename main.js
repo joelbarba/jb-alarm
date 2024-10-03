@@ -109,6 +109,7 @@ let doorLogsCol; // Ref to the doorlog collection
 let ctrlDoorRef;  // Ref to control document for the door status   
 let ctrlAlarmRef; // Ref to control document for the alarm status
 let ctrlAppRef;   // Ref to control document for the running main.js app
+let ctrlSchRef;   // Ref to control document for the activation scheduler
 let newDoc;
 let schedule = { ini: '00:00', end: '00:00', enabled: false };
 
