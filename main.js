@@ -188,8 +188,9 @@ function rescheduleActivation() {
     const now = new Date();
     function minsToNow(time = '00:00') { // Calculat the minutes left to reach the time
       const minutesTime = (parseInt(time.split(':')[0])*60) + parseInt(time.split(':')[1]);
-      let diff = minutesTime - (now.getHours() * 60) + now.getMinutes(); 
+      let diff = minutesTime - ((now.getHours() * 60) + now.getMinutes()); 
       if (diff < 0) { diff += 1440; }
+      return diff;
     }
     const iniTime = minsToNow(schedule.ini);
     const endTime = minsToNow(schedule.end);
