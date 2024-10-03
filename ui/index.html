@@ -29,6 +29,26 @@
     <button id="clear-1-btn"  >DELETE all but last log</button>
     <button id="clear-10-btn" >DELETE all but last 10 logs</button>
     <button id="clear-all-btn">DELETE all</button>
+    <div class="sch-panel">
+      <h3>Scheduler:</h3>
+      <div>
+        <span>Activation   Time:</span> 
+        <input id="sch-ini-time" value="XX:XX:XX"></input>
+        <button id="sch-less30-ini-btn">-30</button>
+        <button id="sch-plus30-ini-btn">+30</button>
+      </div>
+      <div>
+        <span>Deactivation Time:</span>
+        <input id="sch-end-time" value="XX:XX:XX"></input>
+        <button id="sch-less30-end-btn">-30</button>
+        <button id="sch-plus30-end-btn">+30</button>
+      </div>
+      <div class="checkbox-div">
+        <label for="sch-enable-checkbox" style="font-size: 50px;">Enabled:</label>
+        <input type="checkbox" id="sch-checkbox" name="sch-enable-checkbox">
+      </div>
+      <br/><button id="sch-save-btn">Save Schedule</button>
+    </div>
   </div>
 
   <div id="main-panel">

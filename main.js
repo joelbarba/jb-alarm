@@ -109,8 +109,9 @@ let doorLogsCol; // Ref to the doorlog collection
 let ctrlDoorRef;  // Ref to control document for the door status   
 let ctrlAlarmRef; // Ref to control document for the alarm status
 let ctrlAppRef;   // Ref to control document for the running main.js app
-let unsubscribe;
 let newDoc;
+let schedule = { ini: '00:00', end: '00:00', enabled: false };
+
 const auth = getAuth();
 const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, secrets.userAuth.pass).then(async (userCredential) => {
   console.log('Firebase: Logged in');
@@ -118,17 +119,7 @@ const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, 
   ctrlDoorRef  = firestore.doc(db, 'doorlog', '000CTRL_door_status');
   ctrlAlarmRef = firestore.doc(db, 'doorlog', '000CTRL_alarm_status');
   ctrlAppRef   = firestore.doc(db, 'doorlog', '000CTRL_main_app');
-
-  // React on changes from 000CTRL_alarm_status
-  // If the activation changes remotely (from Firebase), sync it and check everything
-  if (unsubscribe) { unsubscribe(); }
-  unsubscribe = firestore.onSnapshot(ctrlAlarmRef, (snap) => { 
-    const doc = snap.data();
-    if (doc.time !== newDoc?.time) {
-      const isFirebaseAlarmActive = doc.alarm === 'active';
-      if (isFirebaseAlarmActive !== isActive) { activation(isFirebaseAlarmActive, 'Firebase', false); }
-    }
-  });
+  ctrlSchRef   = firestore.doc(db, 'doorlog', '000CTRL_schedule');
 
   // Once connected, check if the door status on Firebase (CTRL_door_status) is the same
   // If not the same, change it and add a log to reflect it
@@ -137,8 +128,30 @@ const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, 
   const isFirebaseDoorOpen = doc.door !== 'closed';
   if (isFirebaseDoorOpen !== isOpen) { addLog('door'); }
 
-  // Ping a value to CTRL_main_app every 30 seconds
-  setInterval(() => firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' }), 30*1000);
+
+  // React on changes from 000CTRL_alarm_status
+  // If the activation changes remotely (from Firebase), sync it and check everything
+  firestore.onSnapshot(ctrlAlarmRef, (snap) => { 
+    const doc = snap.data();
+    if (doc.time !== newDoc?.time) {
+      const isFirebaseAlarmActive = doc.alarm === 'active';
+      if (isFirebaseAlarmActive !== isActive) { activation(isFirebaseAlarmActive, 'Firebase', false); }
+    }
+  });
+
+  // Update local values for the activation scheduler
+  firestore.onSnapshot(ctrlSchRef, (snap) => { 
+    const doc = snap.data();
+    schedule.ini = doc.activation_time;
+    schedule.end = doc.deactivation_time;
+    schedule.enabled = !!doc.enabled;
+    rescheduleActivation();
+  });
+
+  
+  setInterval(() => { // Ping a value to CTRL_main_app every 30 seconds
+    firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' });
+  }, 30*1000);
     
 }).catch((error) => console.error(`Login error: ${error.code} -> ${error.message}`));
 
@@ -164,6 +177,26 @@ async function addLog(change = 'door') {
 async function getLogs() {
   const logsSnapshot = await firestore.getDocs(doorLogsCol);
   return logsSnapshot.docs.map(doc => doc.data());
+}
+
+function rescheduleActivation() {
+  console.log('Scheduling automatic activation', schedule);
+  if (schedule.timeoutIni) { clearTimeout(schedule.timeoutIni); }
+  if (schedule.timeoutEnd) { clearTimeout(schedule.timeoutEnd); }
+  if (schedule.enabled) {
+    const now = new Date();
+    function minsToNow(time = '00:00') { // Calculat the minutes left to reach the time
+      const minutesTime = (parseInt(time.split(':')[0])*60) + parseInt(time.split(':')[1]);
+      let diff = minutesTime - (now.getHours() * 60) + now.getMinutes(); 
+      if (diff < 0) { diff += 1440; }
+    }
+    const iniTime = minsToNow(schedule.ini);
+    const endTime = minsToNow(schedule.end);
+    console.log(getTime(), `The alarm will activate in ${iniTime} minutes`);
+    console.log(getTime(), `The alarm will deactivate in ${endTime} minutes`);
+    schedule.timeoutIni = setTimeout(() => activation(true,  'scheduler'), iniTime * 60 * 1000);
+    schedule.timeoutEnd = setTimeout(() => activation(false, 'scheduler'), endTime * 60 * 1000);
+  }
 }
 
 

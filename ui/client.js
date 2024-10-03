@@ -57,6 +57,16 @@ function initFirebase() {
    
       // React on logs change
       firestore.onSnapshot(firestore.collection(db, 'doorlog'), (snapshot) => updateState(snapshot), (err) => console.error(err));
+
+      // Load initial values for the scheduler
+      firestore.getDoc(firestore.doc(db, 'doorlog', '000CTRL_schedule')).then(docSnap =>  {
+        const doc = docSnap.data();
+        $('sch-ini-time').value = doc.activation_time;
+        $('sch-end-time').value = doc.deactivation_time;
+        $('sch-checkbox').value = !!doc.enabled;
+        $('sch-ini-time').style.background = doc.enabled ? 'white': '#555555';
+        $('sch-end-time').style.background = doc.enabled ? 'white': '#555555';
+      });
     } else {
       console.log('No Auth Session');
     }
@@ -165,6 +175,32 @@ $('deactivate-btn').addEventListener('click', ev => switchAlarm(false));
 
 $('warning').addEventListener('click', ev => {
   $('warning').style.display = 'none'; 
+});
+
+
+// Scheduler
+$('sch-less30-ini-btn').addEventListener('click', () => $('sch-ini-time').value = incDecTime($('sch-ini-time').value, -30));
+$('sch-plus30-ini-btn').addEventListener('click', () => $('sch-ini-time').value = incDecTime($('sch-ini-time').value,  30));
+$('sch-less30-end-btn').addEventListener('click', () => $('sch-end-time').value = incDecTime($('sch-end-time').value, -30));
+$('sch-plus30-end-btn').addEventListener('click', () => $('sch-end-time').value = incDecTime($('sch-end-time').value,  30));
+function incDecTime(time = '00:00', delta = 30) {
+  let mins = (parseInt(time.split(':')[0])*60) + parseInt(time.split(':')[1]);
+  mins = (mins + delta) % 1440;
+  if (mins < 0) { mins += 1440; }
+  return (Math.floor(mins / 60) + ':').padStart(3, '0') + ((mins % 60) + '').padStart(2, '0');
+}
+$('sch-checkbox').addEventListener('input', ev =>  {
+  $('sch-ini-time').style.background = ev.target.checked ? 'white': '#555555';
+  $('sch-end-time').style.background = ev.target.checked ? 'white': '#555555';
+});
+$('sch-save-btn').addEventListener('click', ev =>  {
+  const newSch = {
+    activation_time   : $('sch-ini-time').value,
+    deactivation_time : $('sch-end-time').value,
+    enabled           : $('sch-checkbox').value,
+  };
+  console.log('Saving new schedule', newSch);
+  firestore.setDoc(firestore.doc(db, 'doorlog', '000CTRL_schedule'), newSch);
 });
 
 
