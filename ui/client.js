@@ -59,14 +59,7 @@ function initFirebase() {
       firestore.onSnapshot(firestore.collection(db, 'doorlog'), (snapshot) => updateState(snapshot), (err) => console.error(err));
 
       // Load initial values for the scheduler
-      firestore.getDoc(firestore.doc(db, 'doorlog', '000CTRL_schedule')).then(docSnap =>  {
-        const doc = docSnap.data();
-        $('sch-ini-time').value = doc.activation_time;
-        $('sch-end-time').value = doc.deactivation_time;
-        $('sch-checkbox').value = !!doc.enabled;
-        $('sch-ini-time').style.background = doc.enabled ? 'white': '#555555';
-        $('sch-end-time').style.background = doc.enabled ? 'white': '#555555';
-      });
+      firestore.getDoc(firestore.doc(db, 'doorlog', '000CTRL_schedule')).then(snapshot => loadSchedule(snapshot));
     } else {
       console.log('No Auth Session');
     }
@@ -102,6 +95,17 @@ function updateState(snapshot) {
       }
     }
   }
+}
+
+function loadSchedule(snapshot) {
+  const doc = snapshot.data();
+  $('sch-ini-time').value = doc.activation_time;
+  $('sch-end-time').value = doc.deactivation_time;
+  $('sch-checkbox').checked = !!doc.enabled;
+  $('sch-ini-time').style.background = doc.enabled ? 'white': '#555555';
+  $('sch-end-time').style.background = doc.enabled ? 'white': '#555555';
+  if (!doc.enabled) { $('schedule-info').innerHTML = `Schedule: OFF`; } 
+  else { $('schedule-info').innerHTML = `Schedule: from ${doc.activation_time} to ${doc.deactivation_time}`; }
 }
 
 async function switchAlarm(newValue) {
@@ -197,10 +201,13 @@ $('sch-save-btn').addEventListener('click', ev =>  {
   const newSch = {
     activation_time   : $('sch-ini-time').value,
     deactivation_time : $('sch-end-time').value,
-    enabled           : $('sch-checkbox').value,
+    enabled           : $('sch-checkbox').checked,
   };
   console.log('Saving new schedule', newSch);
   firestore.setDoc(firestore.doc(db, 'doorlog', '000CTRL_schedule'), newSch);
+  if (!newSch.enabled) { $('schedule-info').innerHTML = `Schedule: OFF`; } 
+  else { $('schedule-info').innerHTML = `Schedule: from ${newSch.activation_time} to ${newSch.deactivation_time}`; }
+  $('config-panel').style.display = 'none';
 });
 
 
@@ -262,8 +269,11 @@ function printAlarmStatus(alarm) {
 }
 
 setInterval(() => {
-  $('current-time').innerHTML = `Current Time: ${getTime().slice(0, -4)}`;
-  if (logs.length) { $('last-action-ago').innerHTML = timeAgo(new Date(logs[0].time)); }
+  $('current-time').innerHTML = `Time: ${getTime().slice(11, -4)}`;
+  if (logs.length) { 
+    const atTimeAgo = timeAgo(new Date(logs[0].time));
+    if (atTimeAgo !== $('last-action-ago').innerHTML) { $('last-action-ago').innerHTML = atTimeAgo; }
+  }
 
   if ((new Date() - new Date(lastPing)) < 40*1000) {
     $('ping').innerHTML = 'Connected';

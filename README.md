@@ -1,3 +1,14 @@
+
+- To run the app on Raspberry Pi: `node main.js`
+  You can also do it with the `startup.sh` script, putting it to the background with `sh ~/startup.sh > jbalarm.log 2>&1 &`
+
+- Test the UI locally: `node webServer.js`
+  Due to its dependencies, the ui runs as a module, so it can't be served from file:// and it needs to be fetch from an http server.
+
+- Control menu: `run.sh`
+
+
+
 There is one collection doorlogs[] where a log is pushed to every time a change happens
 A change can be of 2 types: 
 change: 'door'   --> When the status of the door changes from/to 'open' <-> 'closed'
@@ -12,6 +23,6 @@ They have a fix ID, and are never deleted (only modified)
 000CTRL_schedule        activation_time: hh24:mi:ss, deactivation_time: hh24:mi:ss, enabled: bool
 
 # TODOS:
-# - Testejar
+# - Muntar caixa i posar cables a lloc
 # - Instalar detector moviment
 # - Millorar script de control (run.sh) to cursor arrow selection

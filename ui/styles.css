@@ -59,7 +59,11 @@ body {
   padding: 120px 0;
   margin: 0 10px 15px;  
 }
-#current-time {
+#info-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 15px;
   font-size: 12px;
 }
 #last-action, #last-action-ago {
