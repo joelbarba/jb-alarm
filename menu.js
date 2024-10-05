@@ -41,6 +41,7 @@ const opts = [
   { code: 'deactivate', title: `DEACTIVATE`,  com: () => `curl -X GET http://$ip:4358/deactivate`,  desc: `Send an http request to deactivate the alarm`, },
   { code: 'check',      title: `CHECK App`,   com: () => `ssh -n -f pi@$${ip} "pgrep -f main.js"`,  desc: `Check the PID of the main.js process`, },
   { code: 'update',     title: `UPDATE`,      com: () => `ssh -n -f pi@$ip "sh update_jbalarm.sh"`, desc: `Git Pull (master) the jb-alarm repo on the Raspberry Pi`, },
+  { code: 'killAll',    title: `KILL xterm`,  com: () => `kill -9 PID`,                             desc: `Terminate all running xterms`, },
   { code: 'shutdown',   title: `SHUTDOWN`,    com: () => `ssh -n -f pi@$ip "sudo shutdown"`,        desc: `Send the shutdown command to the Raspberry Pi`, },
   { code: 'tail',       title: `TAIL -f`,     com: () => `tail -f ~/jbalarm.log`,                   desc: `Shows the logs of main.js in real time`, },
   { code: 'ssh',        title: `SSH Pi`,      com: () => `ssh pi@${ip}`,                            desc: `Ssh into the Raspberry Pi system`, },
@@ -93,6 +94,7 @@ async function selectMainMenuOption(opt) {
   if (opt.code === 'activate')    { await activation('activate'); }
   if (opt.code === 'deactivate')  { await activation('deactivate'); }
   if (opt.code === 'update')      { await updateSH(``); }
+  if (opt.code === 'killAll')     { await killAllXTerm(); }
   if (opt.code === 'shutdown')    { await shutDown(); }
   if (opt.code === 'tail')        { await deatachXTerm('tail'); }
   if (opt.code === 'ssh')         { await deatachXTerm('ssh'); }
@@ -207,6 +209,18 @@ async function shutDown() {
   return runSSH(`sudo shutdown`).then(res => {
     print(`Sending shutdown signal to Raspberry Pi. Wait a few and turn the power off`, 0, top + 3);
   }).catch(err => print(red(err), 0, top + 3));
+}
+
+async function killAllXTerm() {
+  const pids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
+  for (let t = 0; t < pids.length; t++) {
+    const pid = pids[t];
+    if (pid) {
+      cmd(`kill -9 ${pid}`)
+      .then(res => print(green(`Terminal xterm terminated (PID: ${pid})`), 0, top + 5))
+      .catch(err => print(red(err), 0, top + 5));
+    }
+  }
 }
 
 
