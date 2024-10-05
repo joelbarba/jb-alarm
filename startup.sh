@@ -1,4 +1,11 @@
 #!/bin/bash
+
+pid=`pgrep -f main.js`
+if [ $pid ]; then
+  echo "Process already running. Check PID $pid"
+  exit 0
+fi
+
 echo "Starting up JB-ALARM"
 echo ""
 

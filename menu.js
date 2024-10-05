@@ -80,36 +80,24 @@ function printMenu() {
 
 const top = opts.length + 5;
 async function selectMainMenuOption(opt) {
-  clearScreen();
+  for (let t = 0; t < 20; t++) { print(repeat(maxWidth, ' '), 0, opts.length + 5 + t); } // Clear screen
   print(yellow(opt.com()), 0, top);
   move(0, top + 1);
   keyboard.push({}); // Disable menu
-  if (opt.code === 'start')      { await runSH(`startup.sh > ~/jbalarm.log 2>&1 &`); }
-  if (opt.code === 'stop')       { await runSH(`terminate.sh`); }
-  if (opt.code === 'pingPi')  { await pingPi();  }
-  if (opt.code === 'pingApp') { await pingApp(); }
-  if (opt.code === 'scan')    { await scanIPs(); }
-  if (opt.code === 'check')      { await checkMain(); }
-  if (opt.code === 'activate')   { await activation('activate'); }
-  if (opt.code === 'deactivate') { await activation('deactivate'); }
-  if (opt.code === 'update')     { await runSH(`update.sh`); }
-  if (opt.code === 'shutdown')   { }
-  if (opt.code === 'tail') {
-    // print(`It can't be done here, exit and type: ${yellow('ssh pi@' + ip)}`, 0, top);
-    await deatachXTerm('tail');
-  }
-  if (opt.code === 'ssh') {
-      await deatachXTerm('ssh');
-      // cmd(`xterm -geometry 170x60 -fa 'Monospace' -fs 11 -e "ssh pi@${ip}"`);
-  }
-  keyboard.pop(); // Back to main menu
+  if (opt.code === 'start')       { await deatachXTerm('start'); }
+  if (opt.code === 'stop')        { await runSH(`terminate.sh`); }
+  if (opt.code === 'pingPi')      { await pingPi();  }
+  if (opt.code === 'pingApp')     { await pingApp(); }
+  if (opt.code === 'scan')        { await scanIPs(); }
+  if (opt.code === 'check')       { await checkMain(); }
+  if (opt.code === 'activate')    { await activation('activate'); }
+  if (opt.code === 'deactivate')  { await activation('deactivate'); }
+  if (opt.code === 'update')      { await runSH(`update.sh`); }
+  if (opt.code === 'shutdown')    { await shutDown(); }
+  if (opt.code === 'tail')        { await deatachXTerm('tail'); }
+  if (opt.code === 'ssh')         { await deatachXTerm('ssh'); }
+  keyboard.pop(); // Back to main menu keyboard
   printMenu();
-}
-
-function clearScreen() {
-  for (let t = 0; t < 20; t++) {
-    print(repeat(maxWidth, ' '), 0, opts.length + 5 + t);
-  }
 }
 
 
@@ -196,22 +184,45 @@ async function scanIPs() {
 // sshpass -p your_password ssh -n -f pi@192.168.1.132 "pgrep -f main.js"
 function runSSH(command) { move(0, top + 1); return cmd(`ssh -n -f pi@${ip} "${command}"`); }
 
+
+async function runStartup() {
+  return runSSH(`sh ~/PROJECTS/JBALARM/startup.sh > ~/jbalarm.log 2>&1 &`).then(res => {
+    print(green(`Executing main.js via startup.sh`), 0, top + 3);
+    return deatachXTerm('tail');
+  }).catch(err => print(red(err), 0, top + 3));
+}
+
+async function runSH(scriptName) {
+  return runSSH(`sh ~/PROJECTS/JBALARM/${scriptName}`).then(res => {
+    print(green(`${scriptName} executed  \n`) + res, 0, top + 3);
+  }).catch(err => print(red(err), 0, top + 3));
+}
+
 async function checkMain() {
   return runSSH(`pgrep -f main.js`).then(res => {
     print(`The main.js process is running with PID: ${green(res)}`, 0, top + 3);
   }).catch(err => print(red(err), 0, top + 3));
 }
 
-async function runSH(scriptName) {
-  return runSSH(`sh ~/PROJECTS/JBALARM/${scriptName}`).then(res => {
-    print(green(`${scriptName} executed  `) + res, 0, top + 3);
+async function shutDown() {
+  return runSSH(`sudo shutdown`).then(res => {
+    print(`Sending shutdown signal to Raspberry Pi. Wait a few and turn the power off`, 0, top + 3);
   }).catch(err => print(red(err), 0, top + 3));
 }
 
 
-
 async function deatachXTerm(task) {
   const prevPids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
+
+  // return runSSH(`sh ~/PROJECTS/JBALARM/startup.sh > ~/jbalarm.log 2>&1 &`).then(res => {
+  //   print(green(`Executing main.js via startup.sh`), 0, top + 3);
+  //   return deatachXTerm('tail');
+  // }).catch(err => print(red(err), 0, top + 3));
+
+  if (task === 'start') {
+    const command = `ssh -n -f pi@${ip} "sh startup_monitor.sh"`;
+    cmd(`xterm -geometry 170x60 -hold -fa 'Monospace' -fs 11 -e '${command}'`).then(() => {}).catch(() => {});
+  }
 
   if (task === 'tail') {
     const command = `ssh -n -f pi@${ip} "tail -f ~/jbalarm.log"`;
