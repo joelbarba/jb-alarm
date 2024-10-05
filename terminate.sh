@@ -4,7 +4,7 @@ id=`pgrep -f main.js`
 if [ ! $id ]; then
   echo "Process not found: pgrep -f main.js"
 else
-  curl -X GET http://localhost:4358/ledsoff
+  curl -s -X GET http://localhost:4358/ledsoff
   echo ""
   echo "PID = $id"
   echo "Killing process $id"
