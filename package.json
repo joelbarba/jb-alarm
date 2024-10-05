@@ -3,6 +3,7 @@
   "dependencies": {
     "express": "^4.21.0",
     "firebase": "^10.13.2",
-    "onoff": "^6.0.3" 
+    "jb-node-lib": "^1.7.0",
+    "onoff": "^6.0.3"
   }
 }

@@ -1,3 +1,4 @@
+#!/bin/bash
 echo "Starting up JB-ALARM"
 echo ""
 
@@ -9,6 +10,9 @@ export NVM_DIR="$HOME/.config/nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 # nvm ls
-node -v
+# node -v
+
+echo "Logs at ~/jbalarm.log"
+echo "" > ~/jbalarm.log
 
 node main.js
