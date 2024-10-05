@@ -220,7 +220,7 @@ async function deatachXTerm(task) {
   // }).catch(err => print(red(err), 0, top + 3));
 
   if (task === 'start') {
-    const command = `ssh -n -f pi@${ip} "sh startup_monitor.sh"`;
+    const command = `ssh -n -f pi@${ip} "sh ~/PROJECTS/JBALARM/startup_monitor.sh"`;
     cmd(`xterm -geometry 170x60 -hold -fa 'Monospace' -fs 11 -e '${command}'`).then(() => {}).catch(() => {});
   }
 
