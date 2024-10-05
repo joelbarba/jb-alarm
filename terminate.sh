@@ -10,3 +10,4 @@ else
   echo "Killing process $id"
   kill -9 $id
 fi
+exit 0

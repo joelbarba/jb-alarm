@@ -149,7 +149,8 @@ const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, 
     rescheduleActivation();
   });
 
-  
+
+  firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' });
   setInterval(() => { // Ping a value to CTRL_main_app every 30 seconds
     firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' });
   }, 30*1000);

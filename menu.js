@@ -84,15 +84,15 @@ async function selectMainMenuOption(opt) {
   print(yellow(opt.com()), 0, top);
   move(0, top + 1);
   keyboard.push({}); // Disable menu
-  if (opt.code === 'start')      { await runSh(); }
-  if (opt.code === 'stop')       { }
+  if (opt.code === 'start')      { await runSH(`startup.sh > ~/jbalarm.log 2>&1 &`); }
+  if (opt.code === 'stop')       { await runSH(`terminate.sh`); }
   if (opt.code === 'pingPi')  { await pingPi();  }
   if (opt.code === 'pingApp') { await pingApp(); }
   if (opt.code === 'scan')    { await scanIPs(); }
   if (opt.code === 'check')      { await checkMain(); }
   if (opt.code === 'activate')   { await activation('activate'); }
   if (opt.code === 'deactivate') { await activation('deactivate'); }
-  if (opt.code === 'update')     { }
+  if (opt.code === 'update')     { await runSH(`update.sh`); }
   if (opt.code === 'shutdown')   { }
   if (opt.code === 'tail') {
     // print(`It can't be done here, exit and type: ${yellow('ssh pi@' + ip)}`, 0, top);
@@ -196,15 +196,15 @@ async function scanIPs() {
 // sshpass -p your_password ssh -n -f pi@192.168.1.132 "pgrep -f main.js"
 function runSSH(command) { move(0, top + 1); return cmd(`ssh -n -f pi@${ip} "${command}"`); }
 
-async function checkMain() {  
+async function checkMain() {
   return runSSH(`pgrep -f main.js`).then(res => {
     print(`The main.js process is running with PID: ${green(res)}`, 0, top + 3);
   }).catch(err => print(red(err), 0, top + 3));
 }
 
-async function runSh() {
-  return runSSH(`sh ~/PROJECTS/JBALARM/startup.sh > ~/jbalarm.log 2>&1 &`).then(res => {
-    print(`startup.sh executed: ${green(res)}`, 0, top + 3);
+async function runSH(scriptName) {
+  return runSSH(`sh ~/PROJECTS/JBALARM/${scriptName}`).then(res => {
+    print(green(`${scriptName} executed  `) + res, 0, top + 3);
   }).catch(err => print(red(err), 0, top + 3));
 }
 
