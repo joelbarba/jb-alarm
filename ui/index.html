@@ -25,10 +25,10 @@
     <button id="login-btn">Log In</button>
   </div>
 
-  <div id="config-panel" style="display: none;">
+  <div id="config-panel" style="transform: translateX(-110%)">
     <button id="clear-1-btn"  >DELETE all but last log</button>
     <button id="clear-10-btn" >DELETE all but last 10 logs</button>
-    <button id="clear-all-btn">DELETE all</button>
+    <button id="clear-all-btn" style="display: none;">DELETE all</button>
     <div class="sch-panel">
       <h3>Scheduler:</h3>
       <div>
@@ -54,7 +54,8 @@
   <div id="main-panel">
     <h2 id="door-status">The door is: ...</h2>
     <div id="info-line">
-      <span id="current-time">Time:</span>      
+      <span id="current-time">Time:</span>
+      <span style="margin: 0 15px;">-</span>
       <span id="schedule-info">Schedule: From 99:99 to 99:99</span>      
     </div>
 
@@ -65,9 +66,10 @@
     <div>
       <button id="deactivate-btn">Deactivate</button>
       <button id="activate-btn">Activate</button>
+      <button id="activate-oc-btn">Activate on Close: ...</button>
     </div>
 
-    <h3 style="margin-bottom: 0;">Logs:</h3>
+    <!-- <h3 style="margin-bottom: 0;">Logs:</h3> -->
     <p id="logs-list">xxxxx</p>
   </div>
 

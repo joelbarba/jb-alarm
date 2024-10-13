@@ -40,6 +40,10 @@ door.watch((err, value) => {
     isOpen = !!value;
     console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'}`);
     if (isOpen) { checkAndRing(); }
+    
+    // If closing the door, and "activation on close" -> Activate the alarm
+    if (!isOpen && activateOnClose) { activation(true, 'On close'); activateOnClose = false; }
+
     addLog('door');
     syncLeds();
   }
@@ -112,6 +116,7 @@ let ctrlAppRef;   // Ref to control document for the running main.js app
 let ctrlSchRef;   // Ref to control document for the activation scheduler
 let newDoc;
 let schedule = { ini: '00:00', end: '00:00', enabled: false };
+let activateOnClose = false;
 
 const auth = getAuth();
 const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, secrets.userAuth.pass).then(async (userCredential) => {
@@ -135,11 +140,13 @@ const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, 
   firestore.onSnapshot(ctrlAlarmRef, (snap) => { 
     const doc = snap.data();
     if (doc.time !== newDoc?.time) {
+      activateOnClose = doc.activate_on_close;
       const isFirebaseAlarmActive = doc.alarm === 'active';
       if (isFirebaseAlarmActive !== isActive) { activation(isFirebaseAlarmActive, 'Firebase', false); }
     }
   });
-
+  
+  // React on changes from 000CTRL_schedule
   // Update local values for the activation scheduler
   firestore.onSnapshot(ctrlSchRef, (snap) => { 
     const doc = snap.data();

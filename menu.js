@@ -144,7 +144,7 @@ async function scanIPs() {
 
   let sel = 0;
   print(`The following IPs are detected on the local network. Select one (${cyan('Enter')})`, 0, top + 1);
-  print(`or press ${cyan('t')} to test a curl -X GET http://$ip:4358/ping on the IP`, 0, ips.length + 4);
+  print(`or press ${cyan('t')} to test a curl -X GET http://$ip:4358/ping on the IP`, 0, top + 2);
   printIps();
   function printIps() {
     for (let t = 0; t < ips.length; t++) {
@@ -170,7 +170,7 @@ async function scanIPs() {
         printIps();
       }).catch(err => {
         print(red(err), 25, top + 4 + sel);
-        if (sel < ips.length) { sel++ }
+        if (sel < ips.length - 1) { sel++ }
         printIps();
       });
     },

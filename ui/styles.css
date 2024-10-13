@@ -14,8 +14,6 @@ body {
   align-items: center;
 }
 #ping {
-  /* position: fixed;
-  top: 45px; */
   border-radius: 5px;
   background: #00ff39;
   padding: 4px 10px;
@@ -24,6 +22,19 @@ body {
   padding: 15px 70px;
   margin: 25px 10px;
   font-size: 30px;
+}
+#config-panel {
+  position: absolute;
+  background: #5d5d5d;
+  border-radius: 5px;
+  padding: 15px;
+  height: 80vh;
+  width: calc(100% - 50px);
+  transform-origin: top;
+  transition-property: transform;
+  transform: translateX(-110%);
+  transition-duration: .2s;
+  transition-timing-function: cubic-bezier(.05,.5,.2,.9);
 }
 
 #login-panel {
@@ -61,25 +72,30 @@ body {
 }
 #info-line {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  margin: 0 15px;
-  font-size: 12px;
+  font-size: 20px;
 }
 #last-action, #last-action-ago {
   color: gray;
   font-size: 30px;
   font-weight: bold;
 }
-#last-action { margin-top: 100px; }
-#last-action-ago { margin-bottom: 100px; color: #00adad; }
+#last-action { margin-top: 70px; }
+#last-action-ago { margin-bottom: 70px; color: #00adad; }
 
-#activate-btn, #deactivate-btn {
+#activate-btn, #activate-oc-btn, #deactivate-btn {
   font-size: 35px;
   padding: 35px 25px;
   margin: 0px 10px 25px;
   min-width: 300px;
+  width: calc(50% - 120px);
 }
+#activate-oc-btn {
+  width: calc(100% - 205px);
+  /* border: 15px solid #FF9800; */
+}
+
 #logs-list {
   text-align: left;
   font-size: 11px;
@@ -96,15 +112,15 @@ body {
 @keyframes blinker { 50% { opacity: 0.25; }}
 
 .sch-panel div span {
-  width: 300px;
+  width: 200px;
   display: inline-block;
   text-align: right; 
 }
 .sch-panel div input { 
-  width: 140px;
-  font-size: 50px;
-  padding-left: 15px;
-  height: 60px;
+  width: 250px;
+  font-size: 90px;
+  padding-left: 25px;
+  height: 80px;
 }
 .checkbox-div {
   margin-top: 30px;
@@ -115,9 +131,9 @@ body {
 #sch-less30-ini-btn, #sch-plus30-ini-btn,
 #sch-less30-end-btn, #sch-plus30-end-btn {
   padding: 15px 50px;
-  font-size: 30px;
+  font-size: 50px;
   display: inline-block;
-  top: -7px;
+  top: -14px;
   position: relative;
 }
 

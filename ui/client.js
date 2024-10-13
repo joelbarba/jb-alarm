@@ -51,9 +51,14 @@ function initFirebase() {
       console.log('Auth Session Detected', user);
 
       // React on control document changes
-      firestore.onSnapshot(firestore.doc(db, 'doorlog', '000CTRL_door_status'),  doc => { door = doc.data()?.door || 'closed';     printDoorStatus(door);   });
-      firestore.onSnapshot(firestore.doc(db, 'doorlog', '000CTRL_alarm_status'), doc => { alarm = doc.data()?.alarm || 'inactive'; printAlarmStatus(alarm); });
       firestore.onSnapshot(firestore.doc(db, 'doorlog', '000CTRL_main_app'),     doc => { lastPing = doc.data()?.ping || getTime(); });
+      firestore.onSnapshot(firestore.doc(db, 'doorlog', '000CTRL_door_status'),  doc => { door = doc.data()?.door || 'closed';     printDoorStatus(door);   });
+      firestore.onSnapshot(firestore.doc(db, 'doorlog', '000CTRL_alarm_status'), doc => {
+        const data = doc.data();
+        alarm = data?.alarm || 'inactive';
+        isActivateOnClose = !!data?.activate_on_close;
+        printAlarmStatus(alarm); 
+      });
    
       // React on logs change
       firestore.onSnapshot(firestore.collection(db, 'doorlog'), (snapshot) => updateState(snapshot), (err) => console.error(err));
@@ -115,7 +120,7 @@ async function switchAlarm(newValue) {
     const time = getTime();
     const newDoc = { door, time, alarm, change: 'alarm' };
     await firestore.setDoc(firestore.doc(db, 'doorlog', time), newDoc); // Add new log
-    await firestore.setDoc(firestore.doc(db, 'doorlog', '000CTRL_alarm_status'), { time, alarm }); // change status
+    await firestore.setDoc(firestore.doc(db, 'doorlog', '000CTRL_alarm_status'), { time, alarm, activate_on_close: false }); // change status
     console.log('Alarm changed to: ', alarm);
     printAlarmStatus(alarm);
   }  
@@ -135,6 +140,7 @@ $('clear-1-btn').addEventListener('click', async function() {
     await firestore.deleteDoc(firestore.doc(db, 'doorlog', oldLogs[t].id));
   }
   $('clear-1-btn').disabled = false;
+  swapConfig(false);
 });
 
 // Delete -10 logs
@@ -147,6 +153,7 @@ $('clear-10-btn').addEventListener('click', async function() {
     await firestore.deleteDoc(firestore.doc(db, 'doorlog', oldLogs[t].id));
   }
   $('clear-10-btn').disabled = false;
+  swapConfig(false);
 });
 
 // Delete All logs
@@ -160,6 +167,7 @@ $('clear-all-btn').addEventListener('click', async function() {
       await firestore.deleteDoc(firestore.doc(db, 'doorlog', logsCopy[t].id));
     }
     $('clear-all-btn').disabled = false;
+    swapConfig(false);
   }
 });
 
@@ -169,17 +177,29 @@ $('login-btn').addEventListener('click', ev => {
   login(user, pass);
 });
 
-$('config-btn').addEventListener('click', () => {
-  const isHidden = $('config-panel').style.display === 'none';
-  $('config-panel').style.display = isLoggedIn && isHidden ? 'block' : 'none';
-})
+$('info-line').addEventListener('click', () => swapConfig());
+$('config-btn').addEventListener('click', () => swapConfig());
+function swapConfig(isOpen = $('config-panel').style.transform !== 'translateX(0px)') {
+  $('config-panel').style.transform = isLoggedIn && isOpen ? 'translateX(0px)': 'translateX(-110%)';
+}
 
+$('warning').addEventListener('click', ev => $('warning').style.display = 'none');
 $('activate-btn').addEventListener('click',   ev => switchAlarm(true));
 $('deactivate-btn').addEventListener('click', ev => switchAlarm(false));
 
-$('warning').addEventListener('click', ev => {
-  $('warning').style.display = 'none'; 
+let isActivateOnClose = false;
+let actOnCloseBntDis = false;
+$('activate-oc-btn').addEventListener('click', async ev => {
+  if (actOnCloseBntDis) { return; }
+  actOnCloseBntDis = true;
+  console.log('isActivateOnClose = ', isActivateOnClose);
+  isActivateOnClose = !isActivateOnClose;
+  await firestore.updateDoc(firestore.doc(db, 'doorlog', '000CTRL_alarm_status'), { activate_on_close: !!isActivateOnClose });
+  $('activate-oc-btn').innerHTML = `Activate on Close: ${isActivateOnClose ? 'ON' : 'OFF'}`;
+  actOnCloseBntDis = false;
 });
+
+
 
 
 // Scheduler
@@ -207,7 +227,7 @@ $('sch-save-btn').addEventListener('click', ev =>  {
   firestore.setDoc(firestore.doc(db, 'doorlog', '000CTRL_schedule'), newSch);
   if (!newSch.enabled) { $('schedule-info').innerHTML = `Schedule: OFF`; } 
   else { $('schedule-info').innerHTML = `Schedule: from ${newSch.activation_time} to ${newSch.deactivation_time}`; }
-  $('config-panel').style.display = 'none';
+  swapConfig(false);
 });
 
 
@@ -258,11 +278,13 @@ function printDoorStatus(door) {
 }
 function printAlarmStatus(alarm) {
   $('activate-btn').disabled = alarm === 'active';
+  $('activate-oc-btn').disabled = alarm === 'active';
   $('deactivate-btn').disabled = alarm === 'inactive';
   if (alarm === 'active') {
     $('alarm-status').innerHTML = `Alarm: <span style="color: ${activeColor}">ACTIVE</span>`;
   } else if (alarm === 'inactive') {
     $('alarm-status').innerHTML = `Alarm: INACTIVE`;
+    $('activate-oc-btn').innerHTML = `Activate on Close: ${isActivateOnClose ? 'ON' : 'OFF'}`;
   } else {
     $('alarm-status').innerHTML = `Alarm: ???`;
   }
