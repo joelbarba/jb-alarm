@@ -1,3 +1,4 @@
+Quick Setup:
 
 - To run the app on Raspberry Pi: `node main.js`
   You can also do it with the `startup.sh` script, putting it to the background with `sh ~/startup.sh > jbalarm.log 2>&1 &`
@@ -18,11 +19,10 @@ There are 3 additional documents that are only for control (not part of the logs
 They have a fix ID, and are never deleted (only modified)
 
 000CTRL_door_status     door  = open|closed           This reflects the current status of the door
+
 000CTRL_alarm_status    alarm = active|inactive       This reflects the current status of the alarm
+
 000CTRL_main_app        ping  = yyyy-mm-dd hh24:mi:ss This is updated every 30 seconds with the current time by main.js, so clients can know if the process is up or down.
+
 000CTRL_schedule        activation_time: hh24:mi:ss, deactivation_time: hh24:mi:ss, enabled: bool
 
-# TODOS:
-# - Muntar caixa i posar cables a lloc
-# - Instalar detector moviment
-# - Millorar script de control (run.sh) to cursor arrow selection
