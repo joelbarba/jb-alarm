@@ -161,14 +161,14 @@ const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, 
   setInterval(() => { // Ping a value to CTRL_main_app every 30 seconds
     firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' });
     chechSchedule();
-  }, 30*1000);
+  }, 15*1000);
     
 }).catch((error) => console.error(`Login error: ${error.code} -> ${error.message}`));
 
 
 function chechSchedule() {
   const now = new Date();
-  const later = new Date(now.getTime() + 15000); // 15 seconds later
+  const later = new Date(now.getTime() + 15*1000); // 15 seconds later
 
   function schTime(time = '00:00') {
     const hours = time.split(':')[0];
