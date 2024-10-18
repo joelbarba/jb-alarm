@@ -153,16 +153,58 @@ const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, 
     schedule.ini = doc.activation_time;
     schedule.end = doc.deactivation_time;
     schedule.enabled = !!doc.enabled;
-    rescheduleActivation();
+    // rescheduleActivation();
   });
 
 
   firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' });
   setInterval(() => { // Ping a value to CTRL_main_app every 30 seconds
     firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' });
+    chechSchedule();
   }, 30*1000);
     
 }).catch((error) => console.error(`Login error: ${error.code} -> ${error.message}`));
+
+
+function chechSchedule() {
+  const now = new Date();
+  const later = new Date(now.getTime() + 15000); // 15 seconds later
+
+  function schTime(time = '00:00') {
+    const hours = time.split(':')[0];
+    const minutes = time.split(':')[1];
+    return new Date(new Date((new Date()).setHours(hours)).setMinutes(minutes));
+  }
+  const ini = schTime(schedule.ini);
+  const end = schTime(schedule.end);
+
+  if (now <= ini && ini < later) { activation(true,  'scheduler'); }
+  if (now <= end && end < later) { activation(false, 'scheduler'); }
+}
+
+// let timeoutIni;
+// let timeoutEnd;
+// function rescheduleActivation() {
+//   console.log('Scheduling automatic activation', schedule);
+//   if (timeoutIni) { clearTimeout(timeoutIni); }
+//   if (timeoutEnd) { clearTimeout(timeoutEnd); }
+//   if (schedule.enabled) {
+//     const now = new Date();
+//     function minsToNow(time = '00:00') { // Calculat the minutes left to reach the time
+//       const minutesTime = (parseInt(time.split(':')[0])*60) + parseInt(time.split(':')[1]);
+//       let diff = minutesTime - ((now.getHours() * 60) + now.getMinutes()); 
+//       if (diff < 0) { diff += 1440; }
+//       return diff;
+//     }
+//     const iniTime = minsToNow(schedule.ini);
+//     const endTime = minsToNow(schedule.end);
+//     console.log(getTime(), `The alarm will activate in ${iniTime} minutes`);
+//     console.log(getTime(), `The alarm will deactivate in ${endTime} minutes`);
+//     timeoutIni = setTimeout(() => activation(true,  'scheduler'), iniTime * 60 * 1000);
+//     timeoutEnd = setTimeout(() => activation(false, 'scheduler'), endTime * 60 * 1000);
+//   }
+// }
+
 
 
 
@@ -188,28 +230,8 @@ async function getLogs() {
   return logsSnapshot.docs.map(doc => doc.data());
 }
 
-let timeoutIni;
-let timeoutEnd;
-function rescheduleActivation() {
-  console.log('Scheduling automatic activation', schedule);
-  if (timeoutIni) { clearTimeout(timeoutIni); }
-  if (timeoutEnd) { clearTimeout(timeoutEnd); }
-  if (schedule.enabled) {
-    const now = new Date();
-    function minsToNow(time = '00:00') { // Calculat the minutes left to reach the time
-      const minutesTime = (parseInt(time.split(':')[0])*60) + parseInt(time.split(':')[1]);
-      let diff = minutesTime - ((now.getHours() * 60) + now.getMinutes()); 
-      if (diff < 0) { diff += 1440; }
-      return diff;
-    }
-    const iniTime = minsToNow(schedule.ini);
-    const endTime = minsToNow(schedule.end);
-    console.log(getTime(), `The alarm will activate in ${iniTime} minutes`);
-    console.log(getTime(), `The alarm will deactivate in ${endTime} minutes`);
-    timeoutIni = setTimeout(() => activation(true,  'scheduler'), iniTime * 60 * 1000);
-    timeoutEnd = setTimeout(() => activation(false, 'scheduler'), endTime * 60 * 1000);
-  }
-}
+
+
 
 
 function getTime() {
