@@ -145,14 +145,15 @@ async function scanIPs() {
   let sel = 0;
   print(`The following IPs are detected on the local network. Select one (${cyan('Enter')})`, 0, top + 1);
   print(`or press ${cyan('t')} to test a curl -X GET http://$ip:4358/ping on the IP`, 0, top + 2);
+  print(`or press ${cyan('s')} to try to ssh pi@$ip`, 0, top + 3);
   printIps();
   function printIps() {
     for (let t = 0; t < ips.length; t++) {
       let txt = ips[t];
       if (t === sel) { txt = color(ips[t], 'white', 'bright', 'yellow'); }
-      print('     ' + txt, 2, top + 4 + t);
+      print('     ' + txt, 2, top + 5 + t);
     }
-    print('-->', 2, top + 4 + sel);
+    print('-->', 2, top + 5 + sel);
   }
   keyboard.push({
     keyUp   : () => { if (sel > 0)          { sel--; printIps(); } },
@@ -160,19 +161,38 @@ async function scanIPs() {
     keyEnter: () => {
       ip = ips[sel];
       fs.writeFileSync(LAST_IP_FILE, ip);
-      print(` <-- Selected`, 25, top + 4 + sel);
+      print(` <-- Selected`, 25, top + 5 + sel);
       release();
     },
     ['t']: async () => {
-      print(`curl -X GET http://${ips[sel]}:4358/ping`, 25, top + 4 + sel);
+      print(`curl -X GET http://${ips[sel]}:4358/ping`, 25, top + 5 + sel);
       cmd(`curl -s -X GET http://${ips[sel]}:4358/ping`).then(res => {
-        print(green(res) + repeat(80, ' '), 25, top + 4 + sel);
+        print(green(res) + repeat(80, ' '), 25, top + 5 + sel);
         printIps();
       }).catch(err => {
-        print(red(err), 25, top + 4 + sel);
+        print(red(err), 25, top + 5 + sel);
         if (sel < ips.length - 1) { sel++ }
         printIps();
       });
+    },
+    ['s']: async () => {
+      const prevPids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
+      const ip = ips[sel];
+      print(`ssh pi@${ip}`, 25, top + 5 + sel);
+      cmd(`xterm -geometry 170x60 -fa 'Monospace' -fs 11 -e "ssh pi@${ip}"`).then(() => {}).catch(() => {});    
+      await sleep(500);
+      const pids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
+      const pid = pids.find(p => prevPids.indexOf(p) < 0);
+      if (pid) { // it worked
+        // await cmd(`kill -9 ${pid}`);
+        keyboard[0].keyEsc = () => cmd(`kill -9 ${pid}`);
+        print(green('We can SSH to this IP       ') + repeat(80, ' '), 25, top + 5 + sel);
+        printIps();
+      } else { // wrong ip
+        print(red('Could not SSH pi@ at this IP'), 25, top + 5 + sel);
+        if (sel < ips.length - 1) { sel++ }
+        printIps();
+      }
     },
   });
   let release = () => {};

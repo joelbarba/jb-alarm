@@ -328,7 +328,7 @@ function timeAgo(time) {
   if (min <= 1) { return `${min} minute ago`; }
   if (min < 60) { return `${min} minutes ago`; }
   const hour = Math.round((now - time) / 3600000);
-  return `${hour}:${min} ago`;
+  return `${hour}h:${min % 60}m ago`;
 }
 
 

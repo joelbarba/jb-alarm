@@ -7,6 +7,7 @@ Quick Setup:
 
 - Test the UI locally: `node webServer.js`
   Due to its dependencies, the ui runs as a module, so it can't be served from file:// and it needs to be fetch from an http server.
+  To deploy a new version, just git push and netlify will do the job
 
 There is one collection doorlogs[] where a log is pushed to every time a change happens
 A change can be of 2 types: 
