@@ -21,7 +21,8 @@ function log(str) {
   console.log(str);
 }
 
-log('main.js running...');
+log('main.js ====> Running with pid ' + process.pid);
+fs.writeFileSync('./main-pid.txt', process.pid + '');
 
 // setTimeout(_ => door.trigger(1), 5000);
 
@@ -31,7 +32,7 @@ let isOpen = false; // whether the door is open
 let ledInt; // blinking let interval
 
 isOpen = !!door.readSync();
-log(getTime(), `The door is ${isOpen ? 'open' : 'closed'}`);
+log(`The door is ${isOpen ? 'open' : 'closed'}`);
 
 syncLeds();
 
