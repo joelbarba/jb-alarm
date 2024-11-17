@@ -14,10 +14,10 @@ const MAX_RINGING_TIME = 45*1000;
 // const door = (function() { let callback = () => {}; return { trigger: (v) => callback(false, v), watch: (fn) => callback = fn, readSync: () => {} }; }());
 // const button = (function() { let callback = () => {}; return { trigger: (v) => callback(false, v), watch: (fn) => callback = fn }; }());
 
-fs.writeFileSync('~/jbalarm.log', '');
+fs.writeFileSync('./jbalarm.log', '');
 
 function log(str) {
-  fs.writeFileSync('~/jbalarm.log', getTime() + ': ' + str + `\n`, { flag: 'a+' });
+  fs.writeFileSync('./jbalarm.log', getTime() + ': ' + str + `\n`, { flag: 'a+' });
   console.log(str);
 }
 
