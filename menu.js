@@ -208,13 +208,13 @@ function runSSH(command) { move(0, top + 1); return cmd(`ssh -n -f pi@${ip} "${c
 
 
 async function terminateSH() {
-  return runSSH(`sh ~/PROJECTS/JBALARM/terminate.sh`).then(res => {
+  return runSSH(`sh ~/DEV/JB-ALARM/terminate.sh`).then(res => {
     print(green(`terminate.sh executed  \n`) + res, 0, top + 3);
   }).catch(err => print(err, 0, top + 3));
 }
 
 async function updateSH() {
-  return runSSH(`sh ~/PROJECTS/JBALARM/update.sh`).then(res => {
+  return runSSH(`sh ~/DEV/JB-ALARM/update.sh`).then(res => {
     print(green(`update.sh executed  \n`) + res, 0, top + 3);
   }).catch(err => print(err, 0, top + 3));
 }
@@ -248,7 +248,7 @@ async function deatachXTerm(task) {
   const prevPids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
 
   if (task === 'start') {
-    const command = `ssh -n -f pi@${ip} "sh ~/PROJECTS/JBALARM/startup_monitor.sh"`;
+    const command = `ssh -n -f pi@${ip} "sh ~/DEV/JB-ALARM/startup_monitor.sh"`;
     cmd(`xterm -geometry 170x60 -hold -fa 'Monospace' -fs 11 -e '${command}'`).then(() => {}).catch(() => {});
   }
   if (task === 'tail') {

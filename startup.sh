@@ -9,7 +9,7 @@ fi
 echo "Starting up JB-ALARM"
 echo ""
 
-cd ~/PROJECTS/JBALARM
+cd ~/DEV/JB-ALARM
 pwd
 
 export NVM_DIR="$HOME/.config/nvm"
@@ -18,8 +18,24 @@ export NVM_DIR="$HOME/.config/nvm"
 
 # nvm ls
 # node -v
+pid=`pgrep -f main.js`
 
 echo "Logs at ~/jbalarm.log"
 echo "" > ~/jbalarm.log
+echo "main.js PID = $pid" > ~/jbalarm.log
+echo "" > ~/jbalarm.log
 
 node main.js
+
+
+# while [ true ]; do
+#   pid=`cat main-pid.txt`
+#   isRunning=`ps -p $pid -o pid=`
+#   echo "Is PID $pid running? ---> $isRunning" 
+#   if [ ! $isRunning ]; then
+#     echo "Nope, it is not"
+#     node dumb.js &
+#   fi
+#   sleep 4s
+# done
+

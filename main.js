@@ -1,5 +1,6 @@
 // const Gpio = require('onoff').Gpio;
 import { Gpio } from 'onoff';
+import fs from 'fs';
 const door     = new Gpio(16, 'in', 'both',   { debounceTimeout: 500 });
 const button   = new Gpio(4,  'in', 'rising', { debounceTimeout: 100 });
 const greenLed = new Gpio(17, 'out');
@@ -13,7 +14,14 @@ const MAX_RINGING_TIME = 45*1000;
 // const door = (function() { let callback = () => {}; return { trigger: (v) => callback(false, v), watch: (fn) => callback = fn, readSync: () => {} }; }());
 // const button = (function() { let callback = () => {}; return { trigger: (v) => callback(false, v), watch: (fn) => callback = fn }; }());
 
-console.log('main.js running...');
+fs.writeFileSync('~/jbalarm.log', '');
+
+function log(str) {
+  fs.writeFileSync('~/jbalarm.log', getTime() + ': ' + str + `\n`, { flag: 'a+' });
+  console.log(str);
+}
+
+log('main.js running...');
 
 // setTimeout(_ => door.trigger(1), 5000);
 
@@ -23,7 +31,7 @@ let isOpen = false; // whether the door is open
 let ledInt; // blinking let interval
 
 isOpen = !!door.readSync();
-console.log(getTime(), `The door is ${isOpen ? 'open' : 'closed'}`);
+log(getTime(), `The door is ${isOpen ? 'open' : 'closed'}`);
 
 syncLeds();
 
@@ -35,10 +43,10 @@ button.watch((err, value) => {
 door.watch((err, value) => {
   if (err) { console.error('Door sensor error'); throw err; }
   if (isOpen === !!value) {
-    console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'} (sensor glitch - it was already)`);
+    log(`${value} Door ${isOpen ? 'open' : 'closed'} (sensor glitch - it was already)`);
   } else {
     isOpen = !!value;
-    console.log(getTime(), value, `Door ${isOpen ? 'open' : 'closed'}`);
+    log(`${value} Door ${isOpen ? 'open' : 'closed'}`);
     if (isOpen) { checkAndRing(); }
     
     // If closing the door, and "activation on close" -> Activate the alarm
@@ -66,9 +74,9 @@ function activation(newValue = !isActive, origin = 'box switch', internal = true
   if (isActive) {
     greenLed.writeSync(1);
     ledInt = setInterval(_ => { greenLed.writeSync(1); setTimeout(_ => greenLed.writeSync(0), 70)}, 1500);  
-    console.log(getTime(), `ALARM activated (from ${origin})`);
+    log(`ALARM activated (from ${origin})`);
   } else {
-    console.log(getTime(), `ALARM deactivated (from ${origin})`);
+    log(`ALARM deactivated (from ${origin})`);
   }
   syncLeds();
   if (writeLog) { addLog('alarm'); }
@@ -120,7 +128,7 @@ let activateOnClose = false;
 
 const auth = getAuth();
 const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, secrets.userAuth.pass).then(async (userCredential) => {
-  console.log('Firebase: Logged in');
+  log('Firebase: Logged in');
   doorLogsCol = firestore.collection(db, 'doorlog');
   ctrlDoorRef  = firestore.doc(db, 'doorlog', '000CTRL_door_status');
   ctrlAlarmRef = firestore.doc(db, 'doorlog', '000CTRL_alarm_status');
@@ -185,7 +193,7 @@ function chechSchedule() {
 // let timeoutIni;
 // let timeoutEnd;
 // function rescheduleActivation() {
-//   console.log('Scheduling automatic activation', schedule);
+//   log('Scheduling automatic activation ' + schedule);
 //   if (timeoutIni) { clearTimeout(timeoutIni); }
 //   if (timeoutEnd) { clearTimeout(timeoutEnd); }
 //   if (schedule.enabled) {
@@ -198,8 +206,8 @@ function chechSchedule() {
 //     }
 //     const iniTime = minsToNow(schedule.ini);
 //     const endTime = minsToNow(schedule.end);
-//     console.log(getTime(), `The alarm will activate in ${iniTime} minutes`);
-//     console.log(getTime(), `The alarm will deactivate in ${endTime} minutes`);
+//     log(`The alarm will activate in ${iniTime} minutes`);
+//     log(`The alarm will deactivate in ${endTime} minutes`);
 //     timeoutIni = setTimeout(() => activation(true,  'scheduler'), iniTime * 60 * 1000);
 //     timeoutEnd = setTimeout(() => activation(false, 'scheduler'), endTime * 60 * 1000);
 //   }
@@ -221,7 +229,7 @@ async function addLog(change = 'door') {
     // await firestore.addDoc(doorLogsCol, newDoc);
     await firestore.setDoc(firestore.doc(db, 'doorlog', time), newDoc);
   } catch(err) {
-    console.log(getTime(), `Error logging to firebase: ${err}`);
+    log(`Error logging to firebase: ${err}`);
   }
 }
 
@@ -266,4 +274,4 @@ webServer.get('/ledsoff',    (req, res) => { turnLedsOff();     res.status(200).
 
 webServer.get('/logs', async (req, res) => { res.status(200).send(await getLogs()); });
 
-webServer.listen(port, () => console.log(`JBALARM listening on port ${port}!`));
+webServer.listen(port, () => log(`JB-ALARM listening on port ${port}!`));
