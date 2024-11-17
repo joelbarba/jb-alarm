@@ -3,3 +3,4 @@ secrets.js
 .env
 lastIp.txt
 jbalarm.log
+main-pid.txt
