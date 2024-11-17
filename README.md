@@ -2,8 +2,8 @@ Quick Setup:
 
 - Control menu from a client: `node menu.js`
 
-- To run the app on Raspberry Pi: `node main.js`
-  You can also do it with the `startup.sh` script, putting it to the background with `sh ~/startup.sh > jbalarm.log 2>&1 &`
+- To run the app on Raspberry Pi: `node worker.js &`
+  If you don't want the worker, that checks if main.js fails and rerun it, you can also run the app directly with: `node main.js`
 
 - Test the UI locally: `node webServer.js`
   Due to its dependencies, the ui runs as a module, so it can't be served from file:// and it needs to be fetch from an http server.

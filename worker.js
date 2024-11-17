@@ -3,6 +3,15 @@ import readline from 'readline';
 import fs from 'fs';
 import cp from 'node:child_process';
 
+const loopSeconds = proces.argv[2] || 60*5; // Check every 5 minutes by default
+
+/* 
+  This app just checks if "main.js" is running every 5 minuts
+  If it's not running (it might've crashed), it lanuches "main.js" again.
+  We know the PID where main.js is running because it is in the file "main-pid.txt"
+*/
+
+
 function run(cmd) {
   return new Promise((resolve, reject) => cp.exec(cmd, (error, stdout, stderr) => {
     if (error) { console.log(`error: ${error.message}`); reject(error.message); return; }
