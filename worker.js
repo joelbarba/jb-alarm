@@ -3,7 +3,7 @@ import readline from 'readline';
 import fs from 'fs';
 import cp from 'node:child_process';
 
-const loopSeconds = proces.argv[2] || 60*5; // Check every 5 minutes by default
+const loopSeconds = process.argv[2] || 60*5; // Check every 5 minutes by default
 
 /* 
   This app just checks if "main.js" is running every 5 minuts
@@ -67,5 +67,5 @@ while (true) {
   if (!isRunning) {
     launchMain();
   }
-  await sleep(2000);
+  await sleep(loopSeconds * 1000);
 }
