@@ -32,14 +32,15 @@ const LAST_IP_FILE = './lastIp.txt';
 (function readLastIp() { try { ip = fs.readFileSync(LAST_IP_FILE); } catch(err) { fs.writeFileSync(LAST_IP_FILE, ip); } })();
 
 const opts = [
-  { code: 'start',      title: `START`,       com: () => `sh startup.sh`,            desc: `Connect to Raspberry pi and run main.js on the background`,  },
-  { code: 'stop',       title: `STOP`,        com: () => `sh terminate.sh`,                     desc: `Connect to Raspberry pi and stop main.js background process`, },
+  { code: 'scan',       title: `SCAN`,        com: () => `nmap -sn 192.168.1.0/24`,             desc: `Scan the local network to find the IP`, },
+  { code: 'start',      title: `START`,       com: () => `node worker.js &`,                    desc: `Connect to Raspberry pi and run "node worker.js &"`,  },
+  // { code: 'stop',       title: `STOP`,        com: () => `sh terminate.sh`,                     desc: `Connect to Raspberry pi and stop main.js background process`, },
   { code: 'pingPi',     title: `PING Pi`,     com: () => `ping ${ip}`,                          desc: `Ping Raspberry Pi local IP address, to check if it's on`, },
   { code: 'pingApp',    title: `PING App`,    com: () => `curl -X GET http://${ip}:4358/ping`,  desc: `Send a ping to test if main.js is running`, },
-  { code: 'scan',       title: `SCAN`,        com: () => `nmap -sn 192.168.1.0/24`,             desc: `Scan the local network to find the IP`, },
   { code: 'activate',   title: `ACTIVATE`,    com: () => `curl -X GET http://$ip:4358/activate`,    desc: `Send an http request to activate the alarm`, },
   { code: 'deactivate', title: `DEACTIVATE`,  com: () => `curl -X GET http://$ip:4358/deactivate`,  desc: `Send an http request to deactivate the alarm`, },
-  { code: 'check',      title: `CHECK App`,   com: () => `ssh -n -f pi@$${ip} "pgrep -f main.js"`,  desc: `Check the PID of the main.js process`, },
+  { code: 'checkW',     title: `CHECK Wrk`,   com: () => `ssh -n -f pi@$${ip} "ps -ax | grep worker.js"`,  desc: `Check the PID of the worker process`, },
+  { code: 'checkM',     title: `CHECK App`,   com: () => `ssh -n -f pi@$${ip} "ps -ax | grep main.js"`,  desc: `Check the PID of the main process`, },
   { code: 'update',     title: `UPDATE`,      com: () => `ssh -n -f pi@$ip "sh update_jbalarm.sh"`, desc: `Git Pull (master) the jb-alarm repo on the Raspberry Pi`, },
   { code: 'killAll',    title: `KILL xterm`,  com: () => `kill -9 PID`,                             desc: `Terminate all running xterms`, },
   { code: 'shutdown',   title: `SHUTDOWN`,    com: () => `ssh -n -f pi@$ip "sudo shutdown"`,        desc: `Send the shutdown command to the Raspberry Pi`, },
@@ -85,12 +86,13 @@ async function selectMainMenuOption(opt) {
   print(yellow(opt.com()), 0, top);
   move(0, top + 1);
   keyboard.push({}); // Disable menu
-  if (opt.code === 'start')       { await deatachXTerm('start'); }
+  if (opt.code === 'start')       { await start(); }
   if (opt.code === 'stop')        { await terminateSH(); }
   if (opt.code === 'pingPi')      { await pingPi();  }
   if (opt.code === 'pingApp')     { await pingApp(); }
   if (opt.code === 'scan')        { await scanIPs(); }
-  if (opt.code === 'check')       { await checkMain(); }
+  if (opt.code === 'checkW')      { await checkWorker(); }
+  if (opt.code === 'checkM')      { await checkMain(); }
   if (opt.code === 'activate')    { await activation('activate'); }
   if (opt.code === 'deactivate')  { await activation('deactivate'); }
   if (opt.code === 'update')      { await updateSH(``); }
@@ -100,6 +102,16 @@ async function selectMainMenuOption(opt) {
   if (opt.code === 'ssh')         { await deatachXTerm('ssh'); }
   keyboard.pop(); // Back to main menu keyboard
   printMenu();
+}
+
+
+async function start() {
+  // deatachXTerm('start');
+  // return runSSH(`cd ~/DEV/JB-ALARM && worker.js &`).then(res => {
+  //   print(green(`worker.js executed  \n`) + res, 0, top + 3);
+  // }).catch(err => print(err, 0, top + 3));
+  print(`You should run this into the SSH:" node worker.js &  \n`, 0, top + 3);
+  deatachXTerm('ssh');
 }
 
 
@@ -220,8 +232,16 @@ async function updateSH() {
 }
 
 async function checkMain() {
-  return runSSH(`pgrep -f main.js`).then(res => {
-    print(`The main.js process is running with PID: ${green(res)}`, 0, top + 3);
+  await runSSH(`ps -ax | grep -v "grep" | grep main.js`).then(res => {
+    if (res) { print(green(`The main.js process is running: ${res}`), 0, top + 3); }
+    else { print(red(`The main.js is NOT running`), 0, top + 3);}    
+  }).catch(err => print(red(err), 0, top + 3));
+}
+
+async function checkWorker() {
+  await runSSH(`ps -ax | grep -v "grep" | grep worker.js`).then(res => {
+    if (res) { print(green(`The worker.js process is running: ${res}`), 0, top + 3); }
+    else { print(red(`The worker.js is NOT running`), 0, top + 3);}    
   }).catch(err => print(red(err), 0, top + 3));
 }
 
@@ -248,7 +268,8 @@ async function deatachXTerm(task) {
   const prevPids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
 
   if (task === 'start') {
-    const command = `ssh -n -f pi@${ip} "sh ~/DEV/JB-ALARM/startup_monitor.sh"`;
+    // const command = `ssh -n -f pi@${ip} "sh ~/DEV/JB-ALARM/startup_monitor.sh"`;
+    const command = `ssh -n -f pi@${ip} "cd ~/DEV/JB-ALARM && node worker.js &"`;
     cmd(`xterm -geometry 170x60 -hold -fa 'Monospace' -fs 11 -e '${command}'`).then(() => {}).catch(() => {});
   }
   if (task === 'tail') {
