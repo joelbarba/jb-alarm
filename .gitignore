@@ -4,3 +4,4 @@ secrets.js
 lastIp.txt
 jbalarm.log
 main-pid.txt
+worker.log
