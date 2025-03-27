@@ -5,5 +5,8 @@
     "firebase": "^10.13.2",
     "jb-node-lib": "^1.7.0",
     "onoff": "^6.0.3"
+  },
+  "scripts": {
+    "start": "node menu.js"
   }
 }

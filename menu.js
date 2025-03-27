@@ -32,6 +32,7 @@ const LAST_IP_FILE = './lastIp.txt';
 (function readLastIp() { try { ip = fs.readFileSync(LAST_IP_FILE); } catch(err) { fs.writeFileSync(LAST_IP_FILE, ip); } })();
 
 const opts = [
+  { code: 'autoSSH',    title: `AUTO SSH`,    com: () => `nmap -sn 192.168.1.0/24 + SSH`,       desc: `Scan the all IPs and SSH to the valid one`, },
   { code: 'scan',       title: `SCAN`,        com: () => `nmap -sn 192.168.1.0/24`,             desc: `Scan the local network to find the IP`, },
   { code: 'start',      title: `START`,       com: () => `node worker.js &`,                    desc: `Connect to Raspberry pi and run "node worker.js &"`,  },
   // { code: 'stop',       title: `STOP`,        com: () => `sh terminate.sh`,                     desc: `Connect to Raspberry pi and stop main.js background process`, },
@@ -86,6 +87,7 @@ async function selectMainMenuOption(opt) {
   print(yellow(opt.com()), 0, top);
   move(0, top + 1);
   keyboard.push({}); // Disable menu
+  if (opt.code === 'autoSSH')     { await autoSSH(); }
   if (opt.code === 'start')       { await start(); }
   if (opt.code === 'stop')        { await terminateSH(); }
   if (opt.code === 'pingPi')      { await pingPi();  }
@@ -145,6 +147,59 @@ async function activation(verb) {
   });
 }
 
+
+async function autoSSH() {
+  // print(yellow(`nmap -sn 192.168.1.0/24 ...`), 0, top);
+  const res = await cmd(`nmap -sn 192.168.1.0/24 | grep "scan report"`);
+  let ips = []; // Nmap scan report for 192.168.1.128
+  res.split(`\n`).filter(r => !!r).forEach(r => {
+    const ip = r.split('Nmap scan report for ')[1];
+    if (ip && ip.split('.').every(n => n.length <= 3)) { ips.push(ip); }
+  });
+
+  let sel = 0;
+  const listTop = top + 3;
+  print(`The following IPs are detected on the local network.`, 0, top + 1);
+  printIps();
+  function printIps() {
+    for (let t = 0; t < ips.length; t++) {
+      let txt = ips[t];
+      if (t === sel) { txt = color(ips[t], 'white', 'bright', 'yellow'); }
+      print('     ' + txt, 2, listTop + t);
+    }
+    print('-->', 2, listTop + sel);
+  }
+
+  for (let t = 0; t < ips.length; t++) {
+    const res = await sshToIp(t);
+    if (!res) { break; }
+  }
+
+  async function sshToIp(sel) {
+    const prevPids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
+    const ip = ips[sel];
+    print(`ssh pi@${ip}`, 25, listTop + sel);
+    cmd(`xterm -geometry 170x60 -fa 'Monospace' -fs 11 -e "ssh pi@${ip}"`).then(() => {}).catch(() => {});    
+    await sleep(500);
+    const pids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
+    const pid = pids.find(p => prevPids.indexOf(p) < 0);
+    if (pid) { // it worked
+      // await cmd(`kill -9 ${pid}`);
+      keyboard[0].keyEsc = () => cmd(`kill -9 ${pid}`);
+      print(green('We can SSH to this IP       ') + repeat(80, ' '), 25, listTop + sel);
+      printIps();
+      return false;
+    } else { // wrong ip
+      print(red('Could not SSH pi@ at this IP'), 25, listTop + sel);
+      if (sel < ips.length - 1) { sel++ }
+      printIps();
+      return sel;
+    }
+  }
+}
+
+
+
 async function scanIPs() {
   // print(yellow(`nmap -sn 192.168.1.0/24 ...`), 0, top);
   const res = await cmd(`nmap -sn 192.168.1.0/24 | grep "scan report"`);
@@ -158,55 +213,69 @@ async function scanIPs() {
   print(`The following IPs are detected on the local network. Select one (${cyan('Enter')})`, 0, top + 1);
   print(`or press ${cyan('t')} to test a curl -X GET http://$ip:4358/ping on the IP`, 0, top + 2);
   print(`or press ${cyan('s')} to try to ssh pi@$ip`, 0, top + 3);
+  print(`or press ${cyan('a')} to automatically scall all`, 0, top + 4);
+  const listTop = top + 6;
   printIps();
   function printIps() {
     for (let t = 0; t < ips.length; t++) {
       let txt = ips[t];
       if (t === sel) { txt = color(ips[t], 'white', 'bright', 'yellow'); }
-      print('     ' + txt, 2, top + 5 + t);
+      print('     ' + txt, 2, listTop + t);
     }
-    print('-->', 2, top + 5 + sel);
+    print('-->', 2, listTop + sel);
   }
+
   keyboard.push({
     keyUp   : () => { if (sel > 0)          { sel--; printIps(); } },
     keyDown : () => { if (sel < ips.length) { sel++; printIps(); } },
     keyEnter: () => {
       ip = ips[sel];
       fs.writeFileSync(LAST_IP_FILE, ip);
-      print(` <-- Selected`, 25, top + 5 + sel);
+      print(` <-- Selected`, 25, listTop + sel);
       release();
     },
     ['t']: async () => {
-      print(`curl -X GET http://${ips[sel]}:4358/ping`, 25, top + 5 + sel);
+      print(`curl -X GET http://${ips[sel]}:4358/ping`, 25, listTop + sel);
       cmd(`curl -s -X GET http://${ips[sel]}:4358/ping`).then(res => {
-        print(green(res) + repeat(80, ' '), 25, top + 5 + sel);
+        print(green(res) + repeat(80, ' '), 25, listTop + sel);
         printIps();
       }).catch(err => {
-        print(red(err), 25, top + 5 + sel);
+        print(red(err), 25, listTop + sel);
         if (sel < ips.length - 1) { sel++ }
         printIps();
       });
     },
-    ['s']: async () => {
-      const prevPids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
-      const ip = ips[sel];
-      print(`ssh pi@${ip}`, 25, top + 5 + sel);
-      cmd(`xterm -geometry 170x60 -fa 'Monospace' -fs 11 -e "ssh pi@${ip}"`).then(() => {}).catch(() => {});    
-      await sleep(500);
-      const pids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
-      const pid = pids.find(p => prevPids.indexOf(p) < 0);
-      if (pid) { // it worked
-        // await cmd(`kill -9 ${pid}`);
-        keyboard[0].keyEsc = () => cmd(`kill -9 ${pid}`);
-        print(green('We can SSH to this IP       ') + repeat(80, ' '), 25, top + 5 + sel);
-        printIps();
-      } else { // wrong ip
-        print(red('Could not SSH pi@ at this IP'), 25, top + 5 + sel);
-        if (sel < ips.length - 1) { sel++ }
-        printIps();
+    ['s']: async () => sel = await sshToIp(sel),
+    ['a']: async () => {
+      for (let t = 0; t < ips.length; t++) {
+        const res = await sshToIp(t);
+        if (!res) { break; }
       }
     },
   });
+
+  async function sshToIp(sel) {
+    const prevPids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
+    const ip = ips[sel];
+    print(`ssh pi@${ip}`, 25, listTop + sel);
+    cmd(`xterm -geometry 170x60 -fa 'Monospace' -fs 11 -e "ssh pi@${ip}"`).then(() => {}).catch(() => {});    
+    await sleep(500);
+    const pids = await cmd(`ps -A | grep "xterm" | tr -s ' ' | cut -d ' ' -f 2`).then(res => res.split(`\n`));
+    const pid = pids.find(p => prevPids.indexOf(p) < 0);
+    if (pid) { // it worked
+      // await cmd(`kill -9 ${pid}`);
+      keyboard[0].keyEsc = () => cmd(`kill -9 ${pid}`);
+      print(green('We can SSH to this IP       ') + repeat(80, ' '), 25, listTop + sel);
+      printIps();
+      return false;
+    } else { // wrong ip
+      print(red('Could not SSH pi@ at this IP'), 25, listTop + sel);
+      if (sel < ips.length - 1) { sel++ }
+      printIps();
+      return sel;
+    }
+  }
+
   let release = () => {};
   await new Promise((resolve) => release = resolve);
   keyboard.pop(); // Back to main menu
