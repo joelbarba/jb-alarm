@@ -1,5 +1,6 @@
 // const Gpio = require('onoff').Gpio;
 import { Gpio } from 'onoff';
+import { exec } from 'child_process';
 import fs from 'fs';
 const door     = new Gpio(16, 'in', 'both',   { debounceTimeout: 500 });
 const button   = new Gpio(4,  'in', 'rising', { debounceTimeout: 100 });
