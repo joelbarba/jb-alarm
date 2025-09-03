@@ -18,10 +18,13 @@ const MAX_RINGING_TIME = 45*1000;
 fs.writeFileSync('./jbalarm.log', '');
 
 let localIp = '???';
-cmd(`hostname -I`).then((output) => {
+exec(`hostname -I`, (error, stdout, stderr) => {
+  if (error)  { console.log('Error getting local IP'); return; }
+  if (stderr) { console.log('Error getting local IP'); return; }
   localIp = output;
   console.log('Your IP = ', localIp);
 });
+
 
 function log(str) {
   fs.writeFileSync('./jbalarm.log', getTime() + ': ' + str + `\n`, { flag: 'a+' });
