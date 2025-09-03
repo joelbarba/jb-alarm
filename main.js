@@ -16,6 +16,12 @@ const MAX_RINGING_TIME = 45*1000;
 
 fs.writeFileSync('./jbalarm.log', '');
 
+let localIp = '???';
+cmd(`hostname -I`).then((output) => {
+  localIp = output;
+  console.log('Your IP = ', localIp);
+});
+
 function log(str) {
   fs.writeFileSync('./jbalarm.log', getTime() + ': ' + str + `\n`, { flag: 'a+' });
   console.log(str);
@@ -166,9 +172,9 @@ const fireBasePromise = signInWithEmailAndPassword(auth, secrets.userAuth.user, 
   });
 
 
-  firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' });
+  firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running', localIp });
   setInterval(() => { // Ping a value to CTRL_main_app every 30 seconds
-    firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running' });
+    firestore.setDoc(ctrlAppRef, { ping: getTime(), app: 'running', localIp });
     chechSchedule();
   }, 15*1000);
     
