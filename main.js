@@ -21,7 +21,7 @@ let localIp = '???';
 exec(`hostname -I`, (error, stdout, stderr) => {
   if (error)  { console.log('Error getting local IP'); return; }
   if (stderr) { console.log('Error getting local IP'); return; }
-  localIp = output;
+  localIp = stdout.trim();
   console.log('Your IP = ', localIp);
 });
 

@@ -14,14 +14,10 @@ process.stdin.on('keypress', (str, key) => {
 });
 
 
-cmd(`hostname -I`).then((output) => {
-  console.log('Your IP = ', output);
+let localIp = '???';
+exec(`hostname -I`, (error, stdout, stderr) => {
+  if (error)  { console.log('Error getting local IP'); return; }
+  if (stderr) { console.log('Error getting local IP'); return; }
+  localIp = stdout.trim();
+  console.log('Your IP = ', localIp);
 });
-
-function cmd(command) {
-  return new Promise((resolve, reject) => exec(command, (error, stdout, stderr) => {
-    if (error) { reject(error.message); return; }
-    if (stderr) { reject(stderr); return; }
-    return resolve(stdout);
-  }));
-}
