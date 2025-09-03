@@ -140,7 +140,7 @@ $('clear-1-btn').addEventListener('click', async function() {
     await firestore.deleteDoc(firestore.doc(db, 'doorlog', oldLogs[t].id));
   }
   $('clear-1-btn').disabled = false;
-  swapConfig(false);
+  swapConfig(true);
 });
 
 // Delete -10 logs
